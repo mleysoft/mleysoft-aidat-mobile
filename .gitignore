@@ -1,5 +1,23 @@
+android/key.properties
+android/app/*.jks
+android/app/*.keystore
+
+
+# Flutter / Android generated build files
+/build/
 .dart_tool/
-build/
+.flutter-plugins
 .flutter-plugins-dependencies
-android/.gradle/
-android/local.properties
+
+# Android generated files
+/android/.gradle/
+/android/app/build/
+
+# Native generated build files
+**/.cxx/
+**/build/
+
+# Release signing - NEVER commit
+/android/key.properties
+/android/app/*.jks
+/android/app/*.keystore

@@ -1,0 +1,7 @@
+# Copy this file to android/key.properties on the build machine.
+# Do NOT commit real passwords or the .jks file.
+storePassword=YOUR_KEYSTORE_PASSWORD
+keyPassword=YOUR_KEY_PASSWORD
+keyAlias=mleysoft-aidat
+# build.gradle.kts resolves this relative to android/app:
+storeFile=mleysoft-aidat-upload.jks

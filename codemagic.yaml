@@ -15,7 +15,17 @@ workflows:
       - name: Flutter paketlerini hazırla
         script: |
           flutter --version
+          echo "Codemagic FLUTTER_ROOT: $FLUTTER_ROOT"
+          # Windows gelistirme ortamindan kalmis iOS yollarini CI'a tasima.
+          rm -f ios/Flutter/Generated.xcconfig ios/Flutter/flutter_export_environment.sh
+          flutter clean
           flutter pub get
+          test -f ios/Flutter/Generated.xcconfig
+          grep '^FLUTTER_ROOT=' ios/Flutter/Generated.xcconfig
+          if grep -Eq 'FLUTTER_ROOT=.*[A-Za-z]:\\' ios/Flutter/Generated.xcconfig; then
+            echo "HATA: Generated.xcconfig Windows Flutter yolu iceriyor."
+            exit 1
+          fi
 
       - name: iOS proje kontrolleri
         script: |
@@ -31,6 +41,9 @@ workflows:
 
       - name: CocoaPods bağımlılıklarını kur
         script: |
+          export FLUTTER_ROOT="$(dirname $(dirname $(command -v flutter)))"
+          echo "CocoaPods FLUTTER_ROOT: $FLUTTER_ROOT"
+          test -f "$FLUTTER_ROOT/packages/flutter_tools/bin/podhelper.rb"
           cd ios
           pod install --repo-update
 
@@ -43,7 +56,7 @@ workflows:
 
       - name: TestFlight IPA oluştur
         script: |
-          BUILD_NUMBER=$((66 + PROJECT_BUILD_NUMBER))
+          BUILD_NUMBER=$((67 + PROJECT_BUILD_NUMBER))
           echo "MleySoft Aidat build: $BUILD_NUMBER"
           flutter build ipa --release \
             --build-name=1.0.0 \

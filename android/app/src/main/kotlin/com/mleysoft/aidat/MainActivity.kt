@@ -44,7 +44,7 @@ class MainActivity : FlutterActivity() {
                         .setToolbarColor(Color.WHITE)
                         .setNavigationBarColor(Color.WHITE)
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                        builder.setInitialActivityHeightPx(initialHeight, CustomTabsIntent.ACTIVITY_HEIGHT_RESIZE_BEHAVIOR_ADJUSTABLE)
+                        builder.setInitialActivityHeightPx(initialHeight)
                     }
                     builder.build().launchUrl(this, Uri.parse(url))
                     result.success(true)

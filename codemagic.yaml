@@ -15,6 +15,9 @@ workflows:
       - name: Flutter paketlerini hazırla
         script: |
           flutter --version
+          # v71: Bu proje CocoaPods ile yayinlaniyor. Flutter 3.47 otomatik SwiftPM migrasyonunu
+          # denemesin; mevcut Runner scheme bu migrasyona ihtiyaç duymuyor.
+          flutter config --no-enable-swift-package-manager
           echo "Codemagic FLUTTER_ROOT: $FLUTTER_ROOT"
           # Windows gelistirme ortamindan kalmis iOS yollarini CI'a tasima.
           rm -f ios/Flutter/Generated.xcconfig ios/Flutter/flutter_export_environment.sh
@@ -59,7 +62,7 @@ workflows:
 
       - name: TestFlight IPA oluştur
         script: |
-          BUILD_NUMBER=$((69 + PROJECT_BUILD_NUMBER))
+          BUILD_NUMBER=$((71 + PROJECT_BUILD_NUMBER))
           echo "MleySoft Aidat build: $BUILD_NUMBER"
           flutter build ipa --release \
             --build-name=1.0.0 \

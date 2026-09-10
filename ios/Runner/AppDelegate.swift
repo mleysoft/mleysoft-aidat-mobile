@@ -10,7 +10,7 @@ import SafariServices
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
-    let channel = FlutterMethodChannel(name: "com.mleysoft.aidat/legal_browser", binaryMessenger: engineBridge.applicationRegistrar.messenger)
+    let channel = FlutterMethodChannel(name: "com.mleysoft.aidat/legal_browser", binaryMessenger: engineBridge.applicationRegistrar.messenger())
     channel.setMethodCallHandler { call, result in
       guard call.method == "open", let args = call.arguments as? [String: Any], let raw = args["url"] as? String, let url = URL(string: raw) else { result(FlutterMethodNotImplemented); return }
       DispatchQueue.main.async {

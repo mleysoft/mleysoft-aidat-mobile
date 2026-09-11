@@ -17,6 +17,22 @@ void _openPush(PushOpen p){if(!mounted)return;final r=p.route.toLowerCase();var 
 @override void dispose(){_pushSub?.cancel();super.dispose();}
 Future<void>loadProfile()async{try{final d=await Api.request('me');if(mounted)setState(()=>user=Map<String,dynamic>.from(d['user']??{}));}catch(_){}}
 Future<void>refreshBadge()async{try{final d=await Api.request('dashboard');final v=d['stats']?['unread_announcements'];if(mounted)setState(()=>unread=v is num?v.toInt():0);}catch(_){}}
+Future<void>switchResidentApartment()async{
+ try{
+  final d=await Api.request('resident-apartments');
+  final items=List<Map<String,dynamic>>.from((d['items'] as List? ?? []).map((e)=>Map<String,dynamic>.from(e)));
+  final selected=d['selected_apartment_id'];
+  if(!mounted)return;
+  final pick=await showApartmentPicker(context,items,selectedId:selected,title:'Site / Daire Değiştir');
+  if(pick==null)return;
+  final sw=await Api.request('resident-switch',method:'POST',body:{'apartment_id':pick['apartment_id']});
+  await Api.saveToken('${sw['token']}');
+  if(!mounted)return;
+  Navigator.pushAndRemoveUntil(context,MaterialPageRoute(builder:(_)=>const AppShell()),(_)=>false);
+ }catch(e){
+  if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$e'.replaceFirst('Exception: ',''))));
+ }
+}
 Future<void>logout()async{try{await Api.request('logout',method:'POST');}catch(_){}await Api.clear();if(mounted)Navigator.pushAndRemoveUntil(context,MaterialPageRoute(builder:(_)=>const LoginScreen()),(_)=>false);}
 @override
 Widget build(BuildContext c) {
@@ -29,7 +45,7 @@ Widget build(BuildContext c) {
       title: Row(children: [
         Container(width: 42, height: 42, padding: const EdgeInsets.all(7), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFEAECF0))), child: Image.asset('assets/images/logo.png')),
         const SizedBox(width: 11),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(site, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: ink)), Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: muted, fontWeight: FontWeight.w600))])),
+        Expanded(child: InkWell(borderRadius:BorderRadius.circular(12),onTap:switchResidentApartment,child:Padding(padding:const EdgeInsets.symmetric(vertical:5),child:Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Row(children:[Expanded(child:Text(site, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: ink))),const SizedBox(width:4),const Icon(Icons.swap_horiz_rounded,size:16,color:success)]),Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: muted, fontWeight: FontWeight.w600))])))),
       ]),
       actions: [PopupMenuButton<String>(
         icon: const CircleAvatar(radius: 18, backgroundColor: ink, child: Icon(Icons.person_rounded, color: brand, size: 19)),

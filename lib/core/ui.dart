@@ -25,3 +25,139 @@ Future<void>showRecordDetails(BuildContext context,String title,Map<String,dynam
   final keys=(fields??data.keys.where((k)=>_detailLabels.containsKey(k)&&!_hiddenDetailKeys.contains(k)).toList()).where((k)=>data[k]!=null&&'${data[k]}'.trim().isNotEmpty).toList();
   await showModalBottomSheet(context:context,isScrollControlled:true,backgroundColor:Colors.transparent,builder:(x)=>Container(constraints:BoxConstraints(maxHeight:MediaQuery.of(x).size.height*.82),decoration:const BoxDecoration(color:Colors.white,borderRadius:BorderRadius.vertical(top:Radius.circular(30))),child:SafeArea(top:false,child:Column(mainAxisSize:MainAxisSize.min,children:[Container(margin:const EdgeInsets.only(top:10),width:42,height:4,decoration:BoxDecoration(color:const Color(0xFFD0D5DD),borderRadius:BorderRadius.circular(99))),Padding(padding:const EdgeInsets.fromLTRB(20,18,12,12),child:Row(children:[Expanded(child:Text(title,style:const TextStyle(fontSize:23,fontWeight:FontWeight.w900,color:ink,letterSpacing:-.4))),IconButton(onPressed:()=>Navigator.pop(x),icon:const Icon(Icons.close_rounded))])),const Divider(height:1),Flexible(child:SingleChildScrollView(padding:const EdgeInsets.fromLTRB(20,18,20,28),child:Column(children:keys.map((k)=>Container(margin:const EdgeInsets.only(bottom:10),padding:const EdgeInsets.symmetric(horizontal:14,vertical:13),decoration:BoxDecoration(color:bg,borderRadius:BorderRadius.circular(16)),child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[Expanded(flex:4,child:Text(_detailLabels[k]??k,style:const TextStyle(fontSize:12,color:muted,fontWeight:FontWeight.w700))),const SizedBox(width:12),Expanded(flex:6,child:Text(detailValue(k,data[k]),textAlign:TextAlign.right,style:const TextStyle(fontSize:13,color:ink,fontWeight:FontWeight.w800,height:1.35)))]))).toList())))]))));
 }
+
+
+Future<Map<String,dynamic>?> showApartmentPicker(
+  BuildContext context,
+  List<Map<String,dynamic>> items, {
+  dynamic selectedId,
+  String title = 'Site / Daire Seçin',
+}) async {
+  final search = TextEditingController();
+  String query = '';
+
+  final result = await showModalBottomSheet<Map<String,dynamic>>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (sheetContext) => DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: .78,
+      minChildSize: .48,
+      maxChildSize: .94,
+      builder: (context, scrollController) => StatefulBuilder(
+        builder: (context, setLocal) {
+          final q = query.trim().toLowerCase();
+          final filtered = items.where((r) {
+            if (q.isEmpty) return true;
+            final haystack = '${r['site_name'] ?? ''} ${r['block_name'] ?? ''} ${r['door_no'] ?? ''}'.toLowerCase();
+            return haystack.contains(q);
+          }).toList();
+
+          return Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Column(
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(top: 10),
+                    width: 42,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD0D5DD),
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 16, 10, 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: ink)),
+                              const SizedBox(height: 3),
+                              Text('${items.length} kayıtlı daire • Tüm kayıtlar kaydırılabilir ve aranabilir.', style: const TextStyle(fontSize: 11, color: muted)),
+                            ],
+                          ),
+                        ),
+                        IconButton(onPressed: () => Navigator.pop(sheetContext), icon: const Icon(Icons.close_rounded)),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+                    child: TextField(
+                      controller: search,
+                      autofocus: false,
+                      onChanged: (v) => setLocal(() => query = v),
+                      decoration: InputDecoration(
+                        hintText: 'Site, blok veya daire ara...',
+                        prefixIcon: const Icon(Icons.search_rounded),
+                        suffixIcon: query.isEmpty
+                            ? null
+                            : IconButton(
+                                onPressed: () {
+                                  search.clear();
+                                  setLocal(() => query = '');
+                                },
+                                icon: const Icon(Icons.close_rounded),
+                              ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text('${filtered.length} / ${items.length} daire gösteriliyor', style: const TextStyle(fontSize: 11, color: muted, fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Expanded(
+                    child: filtered.isEmpty
+                        ? emptyState('Aramanıza uygun daire bulunamadı.', Icons.search_off_rounded)
+                        : ListView.separated(
+                            controller: scrollController,
+                            padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
+                            itemCount: filtered.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 4),
+                            itemBuilder: (_, i) {
+                              final r = filtered[i];
+                              final active = '${r['apartment_id']}' == '$selectedId';
+                              return Card(
+                                elevation: 0,
+                                color: active ? const Color(0xFFEAF8EF) : Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  side: BorderSide(color: active ? const Color(0xFF9BD8AE) : const Color(0xFFEAECF0)),
+                                ),
+                                child: ListTile(
+                                  enabled: !active,
+                                  leading: Icon(active ? Icons.check_circle_rounded : Icons.apartment_rounded, color: active ? success : ink),
+                                  title: Text('${r['site_name'] ?? ''}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w900)),
+                                  subtitle: Text('${r['block_name'] ?? ''} • Daire ${r['door_no'] ?? ''}'),
+                                  trailing: Text(active ? 'Aktif' : 'Seç', style: TextStyle(fontWeight: FontWeight.w800, color: active ? success : ink)),
+                                  onTap: active ? null : () => Navigator.pop(sheetContext, r),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    ),
+  );
+
+  search.dispose();
+  return result;
+}

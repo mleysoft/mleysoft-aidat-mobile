@@ -87,8 +87,8 @@ class PushService {
 
     try {
       // TestFlight cihazlarında APNs token ilk açılışta birkaç saniye gecikebilir.
-      // 90 saniye boyunca sessizce tekrar dene; kullanıcı arayüzünü bloklama.
-      for (var i = 0; i < 45; i++) {
+      // TestFlight ilk açılışında APNs token gecikebilir; 3 dakika sessizce tekrar dene.
+      for (var i = 0; i < 90; i++) {
         if (_loggingOut || !await _hasAppSession()) return;
         final token = await _getTokenOnce();
         if (token != null && token.isNotEmpty) {
@@ -158,7 +158,7 @@ class PushService {
         'action': 'register',
         'token': token,
         'platform': Platform.isIOS ? 'ios' : 'android',
-        'device_name': Platform.isIOS ? 'MleySoft Aidat iOS' : 'MleySoft Aidat Android',
+        'device_name': Platform.isIOS ? 'MleySoft Aidat iOS / APNs+FCM' : 'MleySoft Aidat Android / FCM',
       });
     } catch (_) {}
   }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../core/api.dart';
 import '../core/loading.dart';
@@ -10,7 +11,10 @@ String tl(dynamic v)=>'${nv(v).toStringAsFixed(2).replaceAll('.', ',')} ₺';
 
 class AppShell extends StatefulWidget{const AppShell({super.key});@override State<AppShell> createState()=>_AppShellState();}
 class _AppShellState extends State<AppShell>{int index=0,unread=0;Map<String,dynamic>? user;final pages=const[HomePage(),DuesPage(),PaymentsPage(),AnnouncementsPage(),TicketsPage()];
-@override void initState(){super.initState();PushService.init();loadProfile();refreshBadge();}
+StreamSubscription<PushOpen>? _pushSub;
+@override void initState(){super.initState();PushService.init();loadProfile();refreshBadge();_pushSub=PushService.opens.listen(_openPush);WidgetsBinding.instance.addPostFrameCallback((_){final p=PushService.takePendingOpen();if(p!=null)_openPush(p);});}
+void _openPush(PushOpen p){if(!mounted)return;final r=p.route.toLowerCase();var target=0;if(r=='announcements'||r=='announcement')target=3;else if(r=='tickets'||r=='ticket')target=4;else if(r=='dues'||r=='due')target=1;else if(r=='payments'||r=='payment')target=2;setState(()=>index=target);if(target==3)refreshBadge();}
+@override void dispose(){_pushSub?.cancel();super.dispose();}
 Future<void>loadProfile()async{try{final d=await Api.request('me');if(mounted)setState(()=>user=Map<String,dynamic>.from(d['user']??{}));}catch(_){}}
 Future<void>refreshBadge()async{try{final d=await Api.request('dashboard');final v=d['stats']?['unread_announcements'];if(mounted)setState(()=>unread=v is num?v.toInt():0);}catch(_){}}
 Future<void>logout()async{try{await Api.request('logout',method:'POST');}catch(_){}await Api.clear();if(mounted)Navigator.pushAndRemoveUntil(context,MaterialPageRoute(builder:(_)=>const LoginScreen()),(_)=>false);}

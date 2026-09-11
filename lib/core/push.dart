@@ -13,9 +13,10 @@ Future<void> firebaseBackground(RemoteMessage message) async {
 class PushOpen {
   final String route;
   final String? id;
-  const PushOpen(this.route, this.id);
-  factory PushOpen.fromMessage(RemoteMessage m) =>
-      PushOpen((m.data['route'] ?? 'home').toString(), m.data['id']?.toString());
+  final String? apartmentId;
+  final String? siteId;
+  const PushOpen(this.route, this.id, {this.apartmentId,this.siteId});
+  factory PushOpen.fromMessage(RemoteMessage m) => PushOpen((m.data['route'] ?? 'home').toString(), m.data['id']?.toString(), apartmentId:m.data['apartment_id']?.toString(), siteId:m.data['site_id']?.toString());
 }
 
 class PushService {

@@ -13,7 +13,7 @@ class AppShell extends StatefulWidget{const AppShell({super.key});@override Stat
 class _AppShellState extends State<AppShell>{int index=0,unread=0;Map<String,dynamic>? user;final pages=const[HomePage(),DuesPage(),PaymentsPage(),AnnouncementsPage(),TicketsPage()];
 StreamSubscription<PushOpen>? _pushSub;
 @override void initState(){super.initState();PushService.init();loadProfile();refreshBadge();_pushSub=PushService.opens.listen(_openPush);WidgetsBinding.instance.addPostFrameCallback((_){final p=PushService.takePendingOpen();if(p!=null)_openPush(p);});}
-Future<void> _openPush(PushOpen p)async{if(!mounted)return;final r=p.route.toLowerCase();if((r=='due_detail'||r=='due-detail')&&p.id!=null){try{if(p.apartmentId!=null){final sw=await Api.request('resident-switch',method:'POST',body:{'apartment_id':int.tryParse(p.apartmentId!)});await Api.saveToken('${sw['token']}');await loadProfile();}if(!mounted)return;final id=int.tryParse(p.id!);if(id!=null){await Navigator.push(context,MaterialPageRoute(builder:(_)=>DueDetailPage(dueId:id)));if(mounted&&p.apartmentId!=null)Navigator.pushAndRemoveUntil(context,MaterialPageRoute(builder:(_)=>const AppShell()),(_)=>false);}}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$e'.replaceFirst('Exception: ',''))));}return;}var target=0;if(r=='announcements'||r=='announcement')target=3;else if(r=='tickets'||r=='ticket')target=4;else if(r=='dues'||r=='due')target=1;else if(r=='payments'||r=='payment')target=2;setState(()=>index=target);if(target==3)refreshBadge();}
+Future<void> _openPush(PushOpen p)async{if(!mounted)return;final r=p.route.toLowerCase();if((r=='due_detail'||r=='due-detail')&&p.id!=null){try{if(p.apartmentId!=null){final sw=await Api.request('resident-switch',method:'POST',body:{'apartment_id':int.tryParse(p.apartmentId!)});await Api.saveToken('${sw['token']}');await PushService.syncToken();await loadProfile();}if(!mounted)return;final id=int.tryParse(p.id!);if(id!=null){await Navigator.push(context,MaterialPageRoute(builder:(_)=>DueDetailPage(dueId:id)));if(mounted&&p.apartmentId!=null)Navigator.pushAndRemoveUntil(context,MaterialPageRoute(builder:(_)=>const AppShell()),(_)=>false);}}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$e'.replaceFirst('Exception: ',''))));}return;}var target=0;if(r=='announcements'||r=='announcement')target=3;else if(r=='tickets'||r=='ticket')target=4;else if(r=='dues'||r=='due')target=1;else if(r=='payments'||r=='payment')target=2;setState(()=>index=target);if(target==3)refreshBadge();}
 @override void dispose(){_pushSub?.cancel();super.dispose();}
 Future<void>loadProfile()async{try{final d=await Api.request('me');if(mounted)setState(()=>user=Map<String,dynamic>.from(d['user']??{}));}catch(_){}}
 Future<void>refreshBadge()async{try{final d=await Api.request('dashboard');final v=d['stats']?['unread_announcements'];if(mounted)setState(()=>unread=v is num?v.toInt():0);}catch(_){}}
@@ -27,13 +27,14 @@ Future<void>switchResidentApartment()async{
   if(pick==null)return;
   final sw=await Api.request('resident-switch',method:'POST',body:{'apartment_id':pick['apartment_id']});
   await Api.saveToken('${sw['token']}');
+  await PushService.syncToken();
   if(!mounted)return;
   Navigator.pushAndRemoveUntil(context,MaterialPageRoute(builder:(_)=>const AppShell()),(_)=>false);
  }catch(e){
   if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$e'.replaceFirst('Exception: ',''))));
  }
 }
-Future<void>logout()async{try{await Api.request('logout',method:'POST');}catch(_){}await Api.clear();if(mounted)Navigator.pushAndRemoveUntil(context,MaterialPageRoute(builder:(_)=>const LoginScreen()),(_)=>false);}
+Future<void>logout()async{await PushService.deactivateForLogout();try{await Api.request('logout',method:'POST');}catch(_){}await Api.clear();if(mounted)Navigator.pushAndRemoveUntil(context,MaterialPageRoute(builder:(_)=>const LoginScreen()),(_)=>false);}
 @override
 Widget build(BuildContext c) {
   final name = "${user?['name'] ?? 'Daire Sakini'}";

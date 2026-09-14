@@ -38,7 +38,8 @@ BUNDLE=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP/Info.plist
 echo "CFBundleDisplayName = $NAME"
 echo "CFBundleIdentifier = $BUNDLE"
 
-if [ "$NAME" != "MleySoft Aidat" ]; then
+NORMALIZED_NAME=$(printf '%s' "$NAME" | sed $'s/\u00A0/ /g')
+if [ "$NORMALIZED_NAME" != "MleySoft Aidat" ]; then
     echo "FAILED: final app adi MleySoft Aidat degil"
     exit 1
 fi

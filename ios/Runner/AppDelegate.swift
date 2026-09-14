@@ -2,20 +2,28 @@ import Flutter
 import UIKit
 import SafariServices
 import UserNotifications
+import FirebaseCore
 import FirebaseMessaging
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   override func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+    // TestFlight/APNs: Firebase native default app must exist before APNs can
+    // hand its device token to Firebase Messaging.
+    if FirebaseApp.app() == nil {
+      FirebaseApp.configure()
+    }
     let result = super.application(application, didFinishLaunchingWithOptions: launchOptions)
     UNUserNotificationCenter.current().delegate = self
     application.registerForRemoteNotifications()
+    NSLog("MleySoft Aidat: Firebase configured, APNs registration requested.")
     return result
   }
 
 
   override func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
     Messaging.messaging().apnsToken = deviceToken
+    NSLog("MleySoft Aidat: APNs token received (%ld bytes).", deviceToken.count)
     super.application(application, didRegisterForRemoteNotificationsWithDeviceToken: deviceToken)
   }
 

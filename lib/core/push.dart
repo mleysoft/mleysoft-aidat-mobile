@@ -68,13 +68,23 @@ class PushService {
     return t != null && t.isNotEmpty;
   }
 
-  static Future<String?> _getTokenOnce() async {
+  static Future<Map<String,String>?> _tokenSnapshot() async {
     try {
+      String apns = '';
       if (Platform.isIOS) {
-        final apns = await FirebaseMessaging.instance.getAPNSToken();
-        if (apns == null || apns.isEmpty) return null;
+        apns = (await FirebaseMessaging.instance.getAPNSToken()) ?? '';
+        if (apns.isEmpty) return null;
       }
-      return await FirebaseMessaging.instance.getToken();
+      final fcm = (await FirebaseMessaging.instance.getToken()) ?? '';
+      if (fcm.isEmpty) return null;
+      final app = Firebase.app();
+      return {
+        'fcm': fcm,
+        'apns': apns,
+        'project_id': app.options.projectId,
+        'app_id': app.options.appId,
+        'sender_id': app.options.messagingSenderId,
+      };
     } catch (_) {
       return null;
     }
@@ -90,9 +100,9 @@ class PushService {
       // TestFlight ilk açılışında APNs token gecikebilir; 3 dakika sessizce tekrar dene.
       for (var i = 0; i < 90; i++) {
         if (_loggingOut || !await _hasAppSession()) return;
-        final token = await _getTokenOnce();
-        if (token != null && token.isNotEmpty) {
-          await register(token);
+        final snapshot = await _tokenSnapshot();
+        if (snapshot != null) {
+          await register(snapshot);
           return;
         }
         await Future<void>.delayed(const Duration(seconds: 2));
@@ -130,14 +140,17 @@ class PushService {
 
     if (!_tokenRefreshBound) {
       _tokenRefreshBound = true;
-      FirebaseMessaging.instance.onTokenRefresh.listen((token) async {
-        if (!_loggingOut && await _hasAppSession()) await register(token);
+      FirebaseMessaging.instance.onTokenRefresh.listen((_) async {
+        if (!_loggingOut && await _hasAppSession()) {
+          final snapshot = await _tokenSnapshot();
+          if (snapshot != null) await register(snapshot);
+        }
       });
     }
 
     if (registerToken && !_loggingOut && await _hasAppSession()) {
-      final token = await _getTokenOnce();
-      if (token != null && token.isNotEmpty) await register(token);
+      final snapshot = await _tokenSnapshot();
+      if (snapshot != null) await register(snapshot);
       unawaited(_registerWithRetry());
     }
   }
@@ -146,17 +159,21 @@ class PushService {
     _loggingOut = false;
     await init(registerToken: false);
     if (!await _hasAppSession()) return;
-    final token = await _getTokenOnce();
-    if (token != null && token.isNotEmpty) await register(token);
+    final snapshot = await _tokenSnapshot();
+    if (snapshot != null) await register(snapshot);
     unawaited(_registerWithRetry());
   }
 
-  static Future<void> register(String token) async {
+  static Future<void> register(Map<String,String> snapshot) async {
     if (_loggingOut || !await _hasAppSession()) return;
     try {
       await Api.request('device-token', method: 'POST', body: {
         'action': 'register',
-        'token': token,
+        'token': snapshot['fcm'] ?? '',
+        'apns_token': snapshot['apns'] ?? '',
+        'firebase_project_id': snapshot['project_id'] ?? '',
+        'firebase_app_id': snapshot['app_id'] ?? '',
+        'firebase_sender_id': snapshot['sender_id'] ?? '',
         'platform': Platform.isIOS ? 'ios' : 'android',
         'device_name': Platform.isIOS ? 'MleySoft Aidat iOS / APNs+FCM' : 'MleySoft Aidat Android / FCM',
       });

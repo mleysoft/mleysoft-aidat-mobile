@@ -37,10 +37,10 @@ cat > "$ENT" <<'EOF'
 EOF
 
 echo "2) iOS gorunen uygulama adi zorlanıyor..."
-/usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName MleySoft Aidat" "$INFO" 2>/dev/null || \
-/usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string MleySoft Aidat" "$INFO"
-/usr/libexec/PlistBuddy -c "Set :CFBundleName MleySoft Aidat" "$INFO" 2>/dev/null || \
-/usr/libexec/PlistBuddy -c "Add :CFBundleName string MleySoft Aidat" "$INFO"
+/usr/libexec/PlistBuddy -c $'Set :CFBundleDisplayName MleySoft\u00A0Aidat' "$INFO" 2>/dev/null || \
+/usr/libexec/PlistBuddy -c $'Add :CFBundleDisplayName string MleySoft\u00A0Aidat' "$INFO"
+/usr/libexec/PlistBuddy -c $'Set :CFBundleName MleySoft\u00A0Aidat' "$INFO" 2>/dev/null || \
+/usr/libexec/PlistBuddy -c $'Add :CFBundleName string MleySoft\u00A0Aidat' "$INFO"
 
 echo "3) Firebase bundle kontrol ediliyor..."
 FB_BUNDLE=$(/usr/libexec/PlistBuddy -c "Print :BUNDLE_ID" "$GOOGLE" 2>/dev/null || true)
@@ -79,8 +79,8 @@ for config_id, name in configs:
 
     prefix = (
         " CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;"
-        ' INFOPLIST_KEY_CFBundleDisplayName = "MleySoft Aidat";'
-        ' INFOPLIST_KEY_CFBundleName = "MleySoft Aidat";'
+        ' INFOPLIST_KEY_CFBundleDisplayName = "MleySoft Aidat";'
+        ' INFOPLIST_KEY_CFBundleName = "MleySoft Aidat";'
     )
     s = s[:m.start(2)] + prefix + settings + s[m.end(2):]
 
@@ -96,8 +96,8 @@ for config_id, name in configs:
     required = [
         "CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;",
         "PRODUCT_BUNDLE_IDENTIFIER = com.mleysoft.aidat;",
-        'INFOPLIST_KEY_CFBundleDisplayName = "MleySoft Aidat";',
-        'INFOPLIST_KEY_CFBundleName = "MleySoft Aidat";',
+        'INFOPLIST_KEY_CFBundleDisplayName = "MleySoft Aidat";',
+        'INFOPLIST_KEY_CFBundleName = "MleySoft Aidat";',
     ]
     for value in required:
         if value not in settings:
@@ -123,7 +123,8 @@ if [ "$APS" != "production" ]; then
     echo "ERROR: Runner.entitlements production degil: $APS"
     exit 1
 fi
-if [ "$DISPLAY" != "MleySoft Aidat" ]; then
+NORMALIZED_DISPLAY=$(printf '%s' "$DISPLAY" | sed $'s/\u00A0/ /g')
+if [ "$NORMALIZED_DISPLAY" != "MleySoft Aidat" ]; then
     echo "ERROR: CFBundleDisplayName MleySoft Aidat degil: $DISPLAY"
     exit 1
 fi

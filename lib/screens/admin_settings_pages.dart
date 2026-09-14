@@ -93,9 +93,9 @@ class _AdminBanksPageState extends State<AdminBanksPage>{bool busy=true;List ite
 
 class AdminSystemSettingsPage extends StatefulWidget{const AdminSystemSettingsPage({super.key});@override State<AdminSystemSettingsPage> createState()=>_AdminSystemSettingsPageState();}
 class _AdminSystemSettingsPageState extends State<AdminSystemSettingsPage>{
- Map<String,dynamic>? firebase;final json=TextEditingController();bool busy=true,saving=false;
+ Map<String,dynamic>? firebase,pushDiag;final json=TextEditingController();bool busy=true,saving=false;
  @override void initState(){super.initState();load();}
- Future<void>load()async{try{firebase=Map<String,dynamic>.from((await Api.request('admin?action=system_settings'))['firebase']??{});}catch(e){if(mounted)_snack(context,_err(e),error:true);}finally{busy=false;if(mounted)setState((){});}}
+ Future<void>load()async{try{firebase=Map<String,dynamic>.from((await Api.request('admin?action=system_settings'))['firebase']??{});try{pushDiag=Map<String,dynamic>.from(await Api.request('admin?action=push_diagnostics'));}catch(_){pushDiag=null;}}catch(e){if(mounted)_snack(context,_err(e),error:true);}finally{busy=false;if(mounted)setState((){});}}
  Future<void>saveJson()async{if(json.text.trim().isEmpty){_snack(context,'Service Account JSON içeriğini yapıştırın.',error:true);return;}setState(()=>saving=true);try{final d=await Api.request('admin',method:'POST',body:{'action':'firebase_service_json','service_account_json':json.text});if(mounted)_snack(context,'${d['message']}');json.clear();await load();}catch(e){if(mounted)_snack(context,_err(e),error:true);}finally{if(mounted)setState(()=>saving=false);}}
  Future<void>disable()async{try{final d=await Api.request('admin',method:'POST',body:{'action':'firebase_disable'});if(mounted)_snack(context,'${d['message']}');await load();}catch(e){if(mounted)_snack(context,_err(e),error:true);}}
  @override Widget build(BuildContext c)=>busy?const Center(child:BrandLoader()):ListView(padding:const EdgeInsets.all(20),children:[
@@ -108,7 +108,23 @@ class _AdminSystemSettingsPageState extends State<AdminSystemSettingsPage>{
    const SizedBox(height:10),TextField(controller:json,minLines:7,maxLines:14,autocorrect:false,enableSuggestions:false,style:const TextStyle(fontFamily:'monospace',fontSize:11),decoration:const InputDecoration(hintText:'{\n  "type": "service_account",\n  ...\n}')),
    const SizedBox(height:12),FilledButton.icon(onPressed:saving?null:saveJson,icon:const Icon(Icons.cloud_upload_rounded),label:Text(saving?'Yapılandırılıyor...':'JSON ile Otomatik Yapılandır')),
    if(_on(firebase?['is_active']))Padding(padding:const EdgeInsets.only(top:8),child:OutlinedButton.icon(onPressed:disable,icon:const Icon(Icons.pause_circle_outline_rounded),label:const Text('Firebase Gönderimini Pasif Yap')))
-  ]),icon:Icons.local_fire_department_rounded)
+  ]),icon:Icons.local_fire_department_rounded),
+  if(pushDiag!=null)_section('iOS / Android Push Tanılama','Cihazın APNs ve FCM kaydının sunucuya gerçekten ulaşıp ulaşmadığını gösterir.',Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    Wrap(spacing:8,runSpacing:8,children:[
+      StatusPill('iOS aktif: ${pushDiag?['stats']?['ios_active']??0}',blue),
+      StatusPill('iOS APNs: ${pushDiag?['stats']?['ios_with_apns']??0}',success),
+      StatusPill('Android aktif: ${pushDiag?['stats']?['android_active']??0}',violet),
+      StatusPill('iOS push hata: ${pushDiag?['stats']?['ios_error']??0}',(pushDiag?['stats']?['ios_error']??0)>0?danger:muted),
+    ]),
+    const SizedBox(height:12),
+    ...((pushDiag?['devices'] as List?)??[]).take(12).map((x){final r=Map<String,dynamic>.from(x);final ios='${r['platform']}'=='ios';return Container(margin:const EdgeInsets.only(bottom:8),padding:const EdgeInsets.all(11),decoration:BoxDecoration(color:bg,borderRadius:BorderRadius.circular(14),border:Border.all(color:line)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+      Row(children:[Icon(ios?Icons.phone_iphone_rounded:Icons.android_rounded,size:18),const SizedBox(width:7),Expanded(child:Text('${r['full_name']??'-'} • ${r['site_name']??'-'}',style:const TextStyle(fontWeight:FontWeight.w900))),StatusPill(r['active_session']==1?'OTURUM AKTİF':'OTURUM YOK',r['active_session']==1?success:muted)]),
+      const SizedBox(height:5),Text('FCM: ${r['has_fcm']==1?'VAR':'YOK'} • APNs: ${r['has_apns']==1?'VAR':'YOK'} • ${r['firebase_project_id']??'-'}',style:const TextStyle(fontSize:10.5,color:muted)),
+      if('${r['last_push_status']??''}'.isNotEmpty)Text('Son push: ${r['last_push_status']} • ${r['last_push_at']??'-'}',style:TextStyle(fontSize:10.5,fontWeight:FontWeight.w700,color:r['last_push_status']=='error'?danger:success)),
+      if('${r['last_push_error']??''}'.isNotEmpty)Text('${r['last_push_error']}',style:const TextStyle(fontSize:10,color:danger)),
+    ]));}),
+    OutlinedButton.icon(onPressed:load,icon:const Icon(Icons.refresh_rounded),label:const Text('Push Tanılamayı Yenile'))
+  ]),icon:Icons.notifications_active_rounded)
  ]);}
 
 class AdminSystemInfoPage extends StatefulWidget{const AdminSystemInfoPage({super.key});@override State<AdminSystemInfoPage> createState()=>_AdminSystemInfoPageState();}

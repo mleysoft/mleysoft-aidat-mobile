@@ -15,7 +15,7 @@ test -f ios/Runner/GoogleService-Info.plist
 /usr/libexec/PlistBuddy -c 'Print :aps-environment' ios/Runner/Runner.entitlements | grep -q '^production$'
 grep -q '^CODE_SIGN_ENTITLEMENTS=Runner/Runner.entitlements$' ios/Flutter/Release.xcconfig
 grep -q 'CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;' ios/Runner.xcodeproj/project.pbxproj
-grep -q 'GoogleService-Info.plist in Resources' ios/Runner.xcodeproj/project.pbxproj
+grep -q 'MleySoft Firebase Plist' ios/Runner.xcodeproj/project.pbxproj
 grep -q 'Messaging.messaging().apnsToken=deviceToken' ios/Runner/AppDelegate.swift
 grep -R -q 'MleySoftNativeBridgePlugin' ios/Runner/GeneratedPluginRegistrant.*
 echo 'PREBUILD SUCCESS: fresh iOS + exact name + production APNs + native bridge'

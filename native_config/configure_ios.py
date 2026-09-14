@@ -51,17 +51,19 @@ if 'com.apple.Push =' not in text:
     end=text.find(';',idx)+1
     cap='\n\t\t\t\t\t\tSystemCapabilities = {\n\t\t\t\t\t\t\tcom.apple.Push = {\n\t\t\t\t\t\t\t\tenabled = 1;\n\t\t\t\t\t\t\t};\n\t\t\t\t\t\t};'
     text=text[:end]+cap+text[end:]
-# Firebase resource
-fid='F10500000000000000000001'; bid='F10500000000000000000002'
-if 'GoogleService-Info.plist in Resources' not in text:
-    text=text.replace('/* Begin PBXBuildFile section */',f'/* Begin PBXBuildFile section */\n\t\t{bid} /* GoogleService-Info.plist in Resources */ = {{isa = PBXBuildFile; fileRef = {fid} /* GoogleService-Info.plist */; }};',1)
-    text=text.replace('/* Begin PBXFileReference section */',f'/* Begin PBXFileReference section */\n\t\t{fid} /* GoogleService-Info.plist */ = {{isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; }};',1)
-    ad=next((l for l in text.splitlines() if 'AppDelegate.swift /* AppDelegate.swift */,' in l),None)
-    if not ad: raise SystemExit('ERROR: AppDelegate PBXGroup point yok')
-    text=text.replace(ad,ad+f'\n\t\t\t\t{fid} /* GoogleService-Info.plist */,',1)
-    rl=next((l for l in text.splitlines() if 'LaunchScreen.storyboard in Resources */,' in l),None)
-    if not rl: raise SystemExit('ERROR: Resources point yok')
-    text=text.replace(rl,rl+f'\n\t\t\t\t{bid} /* GoogleService-Info.plist in Resources */,',1)
+# Firebase plist: template-independent build phase
+phase_id='F10600000000000000000001'; phase_name='MleySoft Firebase Plist'
+if phase_id not in text:
+    target=re.search(r'(97C146ED1CF9000F007C117D /\* Runner \*/ = \{.*?buildPhases = \()(.*?)(\);.*?buildRules)',text,re.S)
+    if not target: raise SystemExit('ERROR: Runner target buildPhases yok')
+    phases=target.group(2)+f'\n\t\t\t\t{phase_id} /* {phase_name} */,'
+    text=text[:target.start(2)]+phases+text[target.end(2):]
+    shell='set -e\\nSRC="$SRCROOT/Runner/GoogleService-Info.plist"\\nDST="$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/GoogleService-Info.plist"\\ntest -f "$SRC"\\nmkdir -p "$(dirname "$DST")"\\ncp "$SRC" "$DST"\\n'
+    esc=shell.replace('\\','\\\\').replace('"','\\"')
+    phase=f'\t\t{phase_id} /* {phase_name} */ = {{isa = PBXShellScriptBuildPhase; alwaysOutOfDate = 1; buildActionMask = 2147483647; files = (); inputPaths = (); name = "MleySoft Firebase Plist"; outputPaths = (); runOnlyForDeploymentPostprocessing = 0; shellPath = /bin/sh; shellScript = "{esc}"; }};\n'
+    marker='/* End PBXShellScriptBuildPhase section */'
+    if marker not in text: raise SystemExit('ERROR: PBXShellScriptBuildPhase section yok')
+    text=text.replace(marker,phase+marker,1)
 pbx.write_text(text,encoding='utf-8')
 # xcconfig entitlement
 for xc in ['Debug.xcconfig','Release.xcconfig']:
@@ -120,7 +122,7 @@ with info_path.open('rb') as f: vi=plistlib.load(f)
 if vi.get('CFBundleDisplayName')!='MleySoft Aidat' or vi.get('CFBundleName')!='Runner': raise SystemExit('ERROR: app name config')
 verify=pbx.read_text(encoding='utf-8'); bc=verify.count(bundle); ec=verify.count('CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;')
 if bc<3 or ec<bc: raise SystemExit(f'ERROR entitlement binding {bc}/{ec}')
-if 'GoogleService-Info.plist in Resources' not in verify: raise SystemExit('ERROR Firebase resource')
+if 'MleySoft Firebase Plist' not in verify: raise SystemExit('ERROR Firebase build phase')
 print('AIDAT IOS CONFIG OK')
 print('Display Name: MleySoft Aidat')
 print('CFBundleName: Runner')

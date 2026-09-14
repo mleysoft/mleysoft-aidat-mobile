@@ -8,15 +8,48 @@ import 'login.dart';
 
 double nv(dynamic v)=>v is num?v.toDouble():double.tryParse('$v')??0;
 String tl(dynamic v)=>'${nv(v).toStringAsFixed(2).replaceAll('.', ',')} ₺';
+final ValueNotifier<int> residentUnreadAnnouncements=ValueNotifier<int>(0);
 
 class AppShell extends StatefulWidget{const AppShell({super.key});@override State<AppShell> createState()=>_AppShellState();}
-class _AppShellState extends State<AppShell>{int index=0,unread=0;Map<String,dynamic>? user;final pages=const[HomePage(),DuesPage(),PaymentsPage(),AnnouncementsPage(),TicketsPage()];
+class _AppShellState extends State<AppShell>{int index=0,unread=0;Map<String,dynamic>? user;late final List<Widget> pages;
 StreamSubscription<PushOpen>? _pushSub;
-@override void initState(){super.initState();PushService.init();loadProfile();refreshBadge();_pushSub=PushService.opens.listen(_openPush);WidgetsBinding.instance.addPostFrameCallback((_){final p=PushService.takePendingOpen();if(p!=null)_openPush(p);});}
-Future<void> _openPush(PushOpen p)async{if(!mounted)return;final r=p.route.toLowerCase();if((r=='due_detail'||r=='due-detail')&&p.id!=null){try{if(p.apartmentId!=null){final sw=await Api.request('resident-switch',method:'POST',body:{'apartment_id':int.tryParse(p.apartmentId!)});await Api.saveToken('${sw['token']}');await PushService.syncToken();await loadProfile();}if(!mounted)return;final id=int.tryParse(p.id!);if(id!=null){await Navigator.push(context,MaterialPageRoute(builder:(_)=>DueDetailPage(dueId:id)));if(mounted&&p.apartmentId!=null)Navigator.pushAndRemoveUntil(context,MaterialPageRoute(builder:(_)=>const AppShell()),(_)=>false);}}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$e'.replaceFirst('Exception: ',''))));}return;}var target=0;if(r=='announcements'||r=='announcement')target=3;else if(r=='tickets'||r=='ticket')target=4;else if(r=='dues'||r=='due')target=1;else if(r=='payments'||r=='payment')target=2;setState(()=>index=target);if(target==3)refreshBadge();}
+@override void initState(){super.initState();pages=[const HomePage(),const DuesPage(),const PaymentsPage(),AnnouncementsPage(onRead:_announcementRead),const TicketsPage()];PushService.init();loadProfile();refreshBadge();_pushSub=PushService.opens.listen(_openPush);WidgetsBinding.instance.addPostFrameCallback((_){final p=PushService.takePendingOpen();if(p!=null)_openPush(p);});}
+void _announcementRead(){if(!mounted)return;setState(()=>unread=unread>0?unread-1:0);residentUnreadAnnouncements.value=unread;}
+Future<void> _markAnnouncementRead(int id)async{_announcementRead();try{await Api.request('announcement-read',method:'POST',body:{'id':id});}catch(_){await refreshBadge();}}
+Future<void> _openPush(PushOpen p)async{
+ if(!mounted)return;
+ final r=p.route.toLowerCase();
+ if((r=='due_detail'||r=='due-detail')&&p.id!=null){
+  try{
+   if(p.apartmentId!=null){final sw=await Api.request('resident-switch',method:'POST',body:{'apartment_id':int.tryParse(p.apartmentId!)});await Api.saveToken('${sw['token']}');await PushService.syncToken();await loadProfile();}
+   if(!mounted)return;
+   final id=int.tryParse(p.id!);
+   if(id!=null){await Navigator.push(context,MaterialPageRoute(builder:(_)=>DueDetailPage(dueId:id)));if(mounted&&p.apartmentId!=null)Navigator.pushAndRemoveUntil(context,MaterialPageRoute(builder:(_)=>const AppShell()),(_)=>false);}
+  }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$e'.replaceFirst('Exception: ',''))));}
+  return;
+ }
+ if((r=='announcements'||r=='announcement')&&p.id!=null){
+  final id=int.tryParse(p.id!);
+  if(id!=null){
+   await _markAnnouncementRead(id);
+   if(!mounted)return;
+   setState(()=>index=3);
+   await Navigator.push(context,MaterialPageRoute(builder:(_)=>AnnouncementDetailPage(announcementId:id)));
+   await refreshBadge();
+   return;
+  }
+ }
+ var target=0;
+ if(r=='announcements'||r=='announcement')target=3;
+ else if(r=='tickets'||r=='ticket')target=4;
+ else if(r=='dues'||r=='due')target=1;
+ else if(r=='payments'||r=='payment')target=2;
+ setState(()=>index=target);
+ if(target==3)refreshBadge();
+}
 @override void dispose(){_pushSub?.cancel();super.dispose();}
 Future<void>loadProfile()async{try{final d=await Api.request('me');if(mounted)setState(()=>user=Map<String,dynamic>.from(d['user']??{}));}catch(_){}}
-Future<void>refreshBadge()async{try{final d=await Api.request('dashboard');final v=d['stats']?['unread_announcements'];if(mounted)setState(()=>unread=v is num?v.toInt():0);}catch(_){}}
+Future<void>refreshBadge()async{try{final d=await Api.request('dashboard');final v=d['stats']?['unread_announcements'];final n=v is num?v.toInt():0;if(mounted)setState(()=>unread=n);residentUnreadAnnouncements.value=n;}catch(_){}}
 Future<void>switchResidentApartment()async{
  try{
   final d=await Api.request('resident-apartments');
@@ -76,8 +109,8 @@ Widget build(BuildContext c) {
 class ResidentHeader extends StatelessWidget{final String title,subtitle;final IconData icon;const ResidentHeader(this.title,this.subtitle,this.icon,{super.key});@override Widget build(BuildContext c)=>Padding(padding:const EdgeInsets.fromLTRB(20,18,20,14),child:Row(children:[IconBubble(icon,blue),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(fontSize:25,fontWeight:FontWeight.w900,letterSpacing:-.6,color:ink)),const SizedBox(height:2),Text(subtitle,style:const TextStyle(color:muted,fontSize:12))]))]));}
 
 class HomePage extends StatefulWidget{const HomePage({super.key});@override State<HomePage> createState()=>_HomePageState();}
-class _HomePageState extends State<HomePage>{Map<String,dynamic>? d;String? error;Future<void>load()async{try{final a=await Api.request('dashboard'),m=await Api.request('me');d={...a,'me':m['user']};error=null;}catch(e){error='$e'.replaceFirst('Exception: ','');}if(mounted)setState((){});}@override void initState(){super.initState();load();}
-@override Widget build(BuildContext c){if(d==null&&error==null)return const Center(child:BrandLoader());if(error!=null)return Center(child:Text(error!));final s=Map<String,dynamic>.from(d!['stats']??{}),me=Map<String,dynamic>.from(d!['me']??{}),recent=(d!['recent'] as List?)??[];return RefreshIndicator(onRefresh:load,child:ListView(padding:const EdgeInsets.only(bottom:110),children:[Padding(padding:const EdgeInsets.fromLTRB(20,18,20,0),child:Container(padding:const EdgeInsets.all(22),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF0B1220),Color(0xFF26354D)],begin:Alignment.topLeft,end:Alignment.bottomRight),borderRadius:BorderRadius.circular(28),boxShadow:const[BoxShadow(color:Color(0x25101828),blurRadius:28,offset:Offset(0,14))]),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[Container(width:48,height:48,decoration:BoxDecoration(color:brand,borderRadius:BorderRadius.circular(16)),child:const Icon(Icons.home_work_rounded,color:ink)),const Spacer(),const StatusPill('AKTİF',brand)]),const SizedBox(height:20),Text('${me['site_name']??'Sitem'}',style:const TextStyle(color:Colors.white,fontSize:23,fontWeight:FontWeight.w900,letterSpacing:-.5)),const SizedBox(height:5),Text('${me['name']??''}  •  ${me['apartment']??'Daire Sakini'}',style:const TextStyle(color:Color(0xFFD0D5DD),fontSize:12,fontWeight:FontWeight.w600))]))),if(d!['active_due']!=null)Padding(padding:const EdgeInsets.fromLTRB(20,16,20,0),child:_ActiveDueCard(Map<String,dynamic>.from(d!['active_due']))),const ResidentHeader('Finansal Durum','Aidat ve ödeme durumunuzun güncel özeti',Icons.insights_rounded),Padding(padding:const EdgeInsets.symmetric(horizontal:20),child:GridView.count(crossAxisCount:2,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisSpacing:12,mainAxisSpacing:12,childAspectRatio:1.12,children:[MetricCard(label:'Toplam Borcum',value:tl(s['debt']),icon:Icons.account_balance_wallet_rounded,color:danger),MetricCard(label:'Toplam Ödenen',value:tl(s['paid']),icon:Icons.verified_rounded,color:success),MetricCard(label:'Bu Ay Kalan',value:tl(s['this_month']),icon:Icons.calendar_month_rounded,color:orange),MetricCard(label:'Yeni Duyuru',value:'${s['unread_announcements']??0}',icon:Icons.notifications_active_rounded,color:violet)])),const Padding(padding:EdgeInsets.fromLTRB(20,26,20,10),child:Text('Son Aidat Hareketleri',style:TextStyle(fontSize:19,fontWeight:FontWeight.w900,color:ink))),...recent.map((x){final r=Map<String,dynamic>.from(x);final due=nv(r['balance'])>0;return Padding(padding:const EdgeInsets.fromLTRB(20,0,20,10),child:SoftCard(onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>DueDetailPage(dueId:int.parse('${r['id']}')))),child:Row(children:[IconBubble(due?Icons.schedule_rounded:Icons.check_rounded,due?orange:success),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('${r['period']??''}',style:const TextStyle(fontWeight:FontWeight.w900,color:ink)),const SizedBox(height:3),Text('${r['apartment']??''} • Ref: ${r['reference']??'-'}',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11,color:muted))])),Column(crossAxisAlignment:CrossAxisAlignment.end,children:[Text(tl(r['amount']),style:const TextStyle(fontWeight:FontWeight.w900,color:ink)),const SizedBox(height:4),StatusPill(due?'${tl(r['balance'])} kaldı':'Ödendi',due?danger:success)])])));})]));}}
+class _HomePageState extends State<HomePage>{Map<String,dynamic>? d;String? error;Future<void>load()async{try{final a=await Api.request('dashboard'),m=await Api.request('me');d={...a,'me':m['user']};final uv=a['stats']?['unread_announcements'];residentUnreadAnnouncements.value=uv is num?uv.toInt():0;error=null;}catch(e){error='$e'.replaceFirst('Exception: ','');}if(mounted)setState((){});}@override void initState(){super.initState();load();}
+@override Widget build(BuildContext c){if(d==null&&error==null)return const Center(child:BrandLoader());if(error!=null)return Center(child:Text(error!));final s=Map<String,dynamic>.from(d!['stats']??{}),me=Map<String,dynamic>.from(d!['me']??{}),recent=(d!['recent'] as List?)??[];return RefreshIndicator(onRefresh:load,child:ListView(padding:const EdgeInsets.only(bottom:110),children:[Padding(padding:const EdgeInsets.fromLTRB(20,18,20,0),child:Container(padding:const EdgeInsets.all(22),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF0B1220),Color(0xFF26354D)],begin:Alignment.topLeft,end:Alignment.bottomRight),borderRadius:BorderRadius.circular(28),boxShadow:const[BoxShadow(color:Color(0x25101828),blurRadius:28,offset:Offset(0,14))]),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[Container(width:48,height:48,decoration:BoxDecoration(color:brand,borderRadius:BorderRadius.circular(16)),child:const Icon(Icons.home_work_rounded,color:ink)),const Spacer(),const StatusPill('AKTİF',brand)]),const SizedBox(height:20),Text('${me['site_name']??'Sitem'}',style:const TextStyle(color:Colors.white,fontSize:23,fontWeight:FontWeight.w900,letterSpacing:-.5)),const SizedBox(height:5),Text('${me['name']??''}  •  ${me['apartment']??'Daire Sakini'}',style:const TextStyle(color:Color(0xFFD0D5DD),fontSize:12,fontWeight:FontWeight.w600))]))),if(d!['active_due']!=null)Padding(padding:const EdgeInsets.fromLTRB(20,16,20,0),child:_ActiveDueCard(Map<String,dynamic>.from(d!['active_due']))),const ResidentHeader('Finansal Durum','Aidat ve ödeme durumunuzun güncel özeti',Icons.insights_rounded),Padding(padding:const EdgeInsets.symmetric(horizontal:20),child:GridView.count(crossAxisCount:2,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisSpacing:12,mainAxisSpacing:12,childAspectRatio:1.12,children:[MetricCard(label:'Toplam Borcum',value:tl(s['debt']),icon:Icons.account_balance_wallet_rounded,color:danger),MetricCard(label:'Toplam Ödenen',value:tl(s['paid']),icon:Icons.verified_rounded,color:success),MetricCard(label:'Bu Ay Kalan',value:tl(s['this_month']),icon:Icons.calendar_month_rounded,color:orange),ValueListenableBuilder<int>(valueListenable:residentUnreadAnnouncements,builder:(_,v,__)=>MetricCard(label:'Yeni Duyuru',value:'$v',icon:Icons.notifications_active_rounded,color:violet))])),const Padding(padding:EdgeInsets.fromLTRB(20,26,20,10),child:Text('Son Aidat Hareketleri',style:TextStyle(fontSize:19,fontWeight:FontWeight.w900,color:ink))),...recent.map((x){final r=Map<String,dynamic>.from(x);final due=nv(r['balance'])>0;return Padding(padding:const EdgeInsets.fromLTRB(20,0,20,10),child:SoftCard(onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>DueDetailPage(dueId:int.parse('${r['id']}')))),child:Row(children:[IconBubble(due?Icons.schedule_rounded:Icons.check_rounded,due?orange:success),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('${r['period']??''}',style:const TextStyle(fontWeight:FontWeight.w900,color:ink)),const SizedBox(height:3),Text('${r['apartment']??''} • Ref: ${r['reference']??'-'}',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11,color:muted))])),Column(crossAxisAlignment:CrossAxisAlignment.end,children:[Text(tl(r['amount']),style:const TextStyle(fontWeight:FontWeight.w900,color:ink)),const SizedBox(height:4),StatusPill(due?'${tl(r['balance'])} kaldı':'Ödendi',due?danger:success)])])));})]));}}
 
 class ModernList extends StatefulWidget{final String path,title,subtitle;final IconData icon;final Widget Function(Map<String,dynamic>) builder;const ModernList({super.key,required this.path,required this.title,required this.subtitle,required this.icon,required this.builder});@override State<ModernList> createState()=>_ModernListState();}
 class _ModernListState extends State<ModernList>{bool busy=true;String? error;List items=[];Future<void>load()async{if(mounted)setState(()=>busy=true);try{final d=await Api.request(widget.path);items=d['items']??[];error=null;}catch(e){error='$e'.replaceFirst('Exception: ','');}if(mounted)setState(()=>busy=false);}@override void initState(){super.initState();load();}@override Widget build(BuildContext c){if(busy)return const Center(child:BrandLoader());return RefreshIndicator(onRefresh:load,child:ListView(padding:const EdgeInsets.only(bottom:110),children:[ResidentHeader(widget.title,widget.subtitle,widget.icon),if(error!=null)Padding(padding:const EdgeInsets.all(20),child:SoftCard(child:Text(error!,style:const TextStyle(color:danger))))else if(items.isEmpty)emptyState('Henüz kayıt bulunmuyor',widget.icon)else ...items.map((x)=>Padding(padding:const EdgeInsets.fromLTRB(20,0,20,10),child:widget.builder(Map<String,dynamic>.from(x))))]));}}
@@ -101,7 +134,130 @@ Widget _sumRow(String l,String v,{bool asset=false,bool bold=false})=>Padding(pa
 Widget _detailChip(String l,String v,{bool strong=false})=>Container(width:150,padding:const EdgeInsets.all(10),decoration:BoxDecoration(color:strong?const Color(0xFFF3FBE3):bg,borderRadius:BorderRadius.circular(12),border:Border.all(color:strong?const Color(0xFFD9EFAD):line)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(l,style:const TextStyle(fontSize:9.5,color:muted,fontWeight:FontWeight.w700)),const SizedBox(height:3),Text(v,style:TextStyle(fontSize:13,fontWeight:FontWeight.w900,color:strong?const Color(0xFF355F00):ink))]));
 
 class PaymentsPage extends StatelessWidget{const PaymentsPage({super.key});@override Widget build(BuildContext c)=>ModernList(path:'payments',title:'Ödemelerim',subtitle:'Gerçekleşen tahsilatlar ve ödeme geçmişiniz',icon:Icons.receipt_long_rounded,builder:(r)=>SoftCard(onTap:()=>details(c,'Ödeme Detayı',r),child:Row(children:[const IconBubble(Icons.verified_rounded,success),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('${r['period']??''}',style:const TextStyle(fontWeight:FontWeight.w900,color:ink)),const SizedBox(height:3),Text('${r['apartment']??''} • ${r['date']??''}',style:const TextStyle(fontSize:11,color:muted))])),Text(tl(r['amount']),style:const TextStyle(fontSize:16,fontWeight:FontWeight.w900,color:success))])));}
-class AnnouncementsPage extends StatelessWidget{const AnnouncementsPage({super.key});@override Widget build(BuildContext c)=>ModernList(path:'announcements',title:'Duyurular',subtitle:'Yönetiminizden gelen güncel bilgilendirmeler',icon:Icons.notifications_active_rounded,builder:(r){final read=r['read']==true||r['read']==1;return SoftCard(onTap:()async{try{await Api.request('announcement-read',method:'POST',body:{'id':r['id']});}catch(_){}if(c.mounted)details(c,'${r['title']??'Duyuru'}',r);},child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[IconBubble(read?Icons.campaign_outlined:Icons.notifications_active_rounded,read?muted:violet),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[Expanded(child:Text('${r['title']??''}',style:const TextStyle(fontWeight:FontWeight.w900,color:ink))),if(!read)const StatusPill('YENİ',violet)]),const SizedBox(height:6),Text('${r['body']??''}',maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:muted,height:1.35)),const SizedBox(height:8),Text('${r['date']??''}',style:const TextStyle(fontSize:11,color:muted))]))]));});}
+class AnnouncementsPage extends StatefulWidget{
+ final VoidCallback? onRead;
+ const AnnouncementsPage({super.key,this.onRead});
+ @override State<AnnouncementsPage> createState()=>_AnnouncementsPageState();
+}
+class _AnnouncementsPageState extends State<AnnouncementsPage>{
+ bool busy=true;String? error;List<Map<String,dynamic>> items=[];
+ @override void initState(){super.initState();load();}
+ Future<void>load()async{
+  if(mounted)setState(()=>busy=true);
+  try{
+   final d=await Api.request('announcements');
+   items=List<Map<String,dynamic>>.from((d['items'] as List? ?? []).map((e)=>Map<String,dynamic>.from(e)));
+   error=null;
+  }catch(e){error='$e'.replaceFirst('Exception: ','');}
+  if(mounted)setState(()=>busy=false);
+ }
+ Future<void>openItem(Map<String,dynamic> r)async{
+  final wasRead=r['read']==true||r['read']==1;
+  if(!wasRead){
+   r['read']=true;
+   if(mounted)setState((){});
+   widget.onRead?.call();
+   try{
+    await Api.request('announcement-read',method:'POST',body:{'id':r['id']});
+   }catch(_){
+    r['read']=false;
+    if(mounted)setState((){});
+    await load();
+   }
+  }
+  if(!mounted)return;
+  await Navigator.push(context,MaterialPageRoute(builder:(_)=>AnnouncementDetailPage(
+   announcementId:int.parse('${r['id']}'),
+   initial:Map<String,dynamic>.from(r),
+  )));
+ }
+ @override Widget build(BuildContext c){
+  if(busy)return const Center(child:BrandLoader());
+  return RefreshIndicator(onRefresh:load,child:ListView(
+   padding:const EdgeInsets.only(bottom:110),
+   children:[
+    const ResidentHeader('Duyurular','Yönetiminizden gelen güncel bilgilendirmeler',Icons.notifications_active_rounded),
+    if(error!=null)Padding(padding:const EdgeInsets.all(20),child:SoftCard(child:Text(error!,style:const TextStyle(color:danger))))
+    else if(items.isEmpty)emptyState('Henüz kayıt bulunmuyor',Icons.notifications_active_rounded)
+    else ...items.map((r){
+     final read=r['read']==true||r['read']==1;
+     return Padding(
+      padding:const EdgeInsets.fromLTRB(20,0,20,10),
+      child:SoftCard(
+       onTap:()=>openItem(r),
+       child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        IconBubble(read?Icons.campaign_outlined:Icons.notifications_active_rounded,read?muted:violet),
+        const SizedBox(width:12),
+        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+         Row(children:[
+          Expanded(child:Text('${r['title']??''}',style:const TextStyle(fontWeight:FontWeight.w900,color:ink))),
+          if(!read)const StatusPill('YENİ',violet)
+         ]),
+         const SizedBox(height:6),
+         Text('${r['body']??''}',maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:muted,height:1.35)),
+         const SizedBox(height:8),
+         Text('${r['date']??''}',style:const TextStyle(fontSize:11,color:muted))
+        ]))
+       ])
+      )
+     );
+    })
+   ]
+  ));
+ }
+}
+
+class AnnouncementDetailPage extends StatefulWidget{
+ final int announcementId;
+ final Map<String,dynamic>? initial;
+ const AnnouncementDetailPage({super.key,required this.announcementId,this.initial});
+ @override State<AnnouncementDetailPage> createState()=>_AnnouncementDetailPageState();
+}
+class _AnnouncementDetailPageState extends State<AnnouncementDetailPage>{
+ Map<String,dynamic>? item;String? error;bool loading=false;
+ @override void initState(){super.initState();item=widget.initial;load();}
+ Future<void>load()async{
+  if(item==null&&mounted)setState(()=>loading=true);
+  try{
+   final d=await Api.request('announcement-detail?id=${widget.announcementId}');
+   item=Map<String,dynamic>.from(d['announcement']??{});
+   error=null;
+  }catch(e){if(item==null)error='$e'.replaceFirst('Exception: ','');}
+  if(mounted)setState(()=>loading=false);
+ }
+ @override Widget build(BuildContext c){
+  if((loading||item==null)&&error==null)return const Scaffold(backgroundColor:bg,body:Center(child:BrandLoader()));
+  if(error!=null&&item==null)return Scaffold(backgroundColor:bg,appBar:AppBar(title:const Text('Duyuru Detayı')),body:Center(child:Padding(padding:const EdgeInsets.all(24),child:SoftCard(child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.error_outline_rounded,size:42,color:danger),const SizedBox(height:10),Text(error!,textAlign:TextAlign.center),const SizedBox(height:12),FilledButton.icon(onPressed:load,icon:const Icon(Icons.refresh),label:const Text('Tekrar Dene'))])))));
+  final r=item!;
+  return Scaffold(
+   backgroundColor:bg,
+   appBar:AppBar(title:const Text('Duyuru Detayı')),
+   body:RefreshIndicator(
+    onRefresh:load,
+    child:ListView(padding:const EdgeInsets.fromLTRB(18,16,18,32),children:[
+     Container(
+      padding:const EdgeInsets.all(22),
+      decoration:BoxDecoration(
+       gradient:const LinearGradient(colors:[Color(0xFF101828),Color(0xFF344054)],begin:Alignment.topLeft,end:Alignment.bottomRight),
+       borderRadius:BorderRadius.circular(26),
+       boxShadow:const[BoxShadow(color:Color(0x25101828),blurRadius:24,offset:Offset(0,10))]
+      ),
+      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+       const Icon(Icons.campaign_rounded,color:brand,size:38),
+       const SizedBox(height:18),
+       Text('${r['title']??'Duyuru'}',style:const TextStyle(color:Colors.white,fontSize:23,fontWeight:FontWeight.w900,height:1.15)),
+       const SizedBox(height:8),
+       Text('${r['date']??''}',style:const TextStyle(color:Color(0xFFD0D5DD),fontSize:11,fontWeight:FontWeight.w600))
+      ])
+     ),
+     const SizedBox(height:14),
+     SoftCard(child:Text('${r['body']??''}',style:const TextStyle(color:ink,fontSize:15,height:1.6,fontWeight:FontWeight.w500))),
+    ])
+   )
+  );
+ }
+}
+
 
 class TicketsPage extends StatefulWidget {
   const TicketsPage({super.key});

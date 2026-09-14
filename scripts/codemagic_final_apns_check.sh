@@ -48,6 +48,19 @@ if [ "$BUNDLE_ID" != "com.mleysoft.aidat" ]; then
   exit 1
 fi
 
+for LANG in tr en; do
+  LOC="$APP/$LANG.lproj/InfoPlist.strings"
+  if [ ! -f "$LOC" ]; then
+    echo "ERROR: FINAL localized app name missing: $LANG"
+    exit 1
+  fi
+  if ! grep -q 'CFBundleDisplayName = "MleySoft Aidat";' "$LOC"; then
+    echo "ERROR: FINAL localized display name wrong: $LANG"
+    cat "$LOC" || true
+    exit 1
+  fi
+done
+
 if [ ! -f "$APP/GoogleService-Info.plist" ]; then
   echo "ERROR: FINAL IPA Firebase plist yok"
   exit 1
@@ -86,7 +99,7 @@ fi
 
 echo ""
 echo "########################################"
-echo "FINAL IPA SUCCESS V109"
+echo "FINAL IPA SUCCESS V111"
 echo " - Name = MleySoft Aidat"
 echo " - CFBundleName = Runner"
 echo " - Bundle = com.mleysoft.aidat"

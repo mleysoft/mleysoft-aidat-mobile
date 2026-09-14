@@ -23,6 +23,24 @@ for mode in ['fetch','remote-notification']:
 info['UIBackgroundModes']=modes
 info.pop('FirebaseAppDelegateProxyEnabled',None)
 with info_path.open('wb') as f: plistlib.dump(info,f,sort_keys=False)
+
+# iOS launcher name hard-fix.
+# Keep the signed executable/product as Runner (same working MleySoft IK rule),
+# but provide localized InfoPlist.strings for BOTH Turkish and English so
+# SpringBoard has no fallback path that can collapse the display label.
+info["CFBundleDevelopmentRegion"] = "tr"
+info["CFBundleLocalizations"] = ["tr", "en"]
+info["LSHasLocalizedDisplayName"] = True
+with info_path.open('wb') as f: plistlib.dump(info,f,sort_keys=False)
+
+for lang in ["tr", "en"]:
+    lproj = runner / f"{lang}.lproj"
+    lproj.mkdir(parents=True, exist_ok=True)
+    (lproj / "InfoPlist.strings").write_text(
+        'CFBundleDisplayName = "MleySoft Aidat";\n'
+        'CFBundleName = "MleySoft Aidat";\n',
+        encoding="utf-8"
+    )
 # pbx
 text=pbx.read_text(encoding='utf-8')
 text=re.sub(r'PRODUCT_BUNDLE_IDENTIFIER = [^;]*RunnerTests;','PRODUCT_BUNDLE_IDENTIFIER = com.mleysoft.aidat.RunnerTests;',text)
@@ -61,7 +79,7 @@ if phase_id not in text:
     # project.pbxproj shellScript must contain exactly one escaped \\n per line.
     # Do NOT escape backslashes a second time; that makes Xcode execute literal
     # `\\n` characters and corrupts `set -e`.
-    shell='set -e\\nSRC="$SRCROOT/Runner/GoogleService-Info.plist"\\nDST="$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/GoogleService-Info.plist"\\ntest -f "$SRC"\\nmkdir -p "$(dirname "$DST")"\\ncp "$SRC" "$DST"\\n'
+    shell='set -e\\nSRC="$SRCROOT/Runner/GoogleService-Info.plist"\\nDST="$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/GoogleService-Info.plist"\\ntest -f "$SRC"\\nmkdir -p "$(dirname "$DST")"\\ncp "$SRC" "$DST"\\nfor LANG in tr en; do\\n  LSRC="$SRCROOT/Runner/$LANG.lproj/InfoPlist.strings"\\n  LDST="$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/$LANG.lproj/InfoPlist.strings"\\n  test -f "$LSRC"\\n  mkdir -p "$(dirname "$LDST")"\\n  cp "$LSRC" "$LDST"\\ndone\\n'
     esc=shell.replace('"','\\"')
     phase=f'\t\t{phase_id} /* {phase_name} */ = {{isa = PBXShellScriptBuildPhase; alwaysOutOfDate = 1; buildActionMask = 2147483647; files = (); inputPaths = (); name = "MleySoft Firebase Plist"; outputPaths = (); runOnlyForDeploymentPostprocessing = 0; shellPath = /bin/sh; shellScript = "{esc}"; }};\n'
     marker='/* End PBXShellScriptBuildPhase section */'
@@ -123,6 +141,10 @@ import FirebaseMessaging
 # verify
 with info_path.open('rb') as f: vi=plistlib.load(f)
 if vi.get('CFBundleDisplayName')!='MleySoft Aidat' or vi.get('CFBundleName')!='Runner': raise SystemExit('ERROR: app name config')
+for lang in ['tr','en']:
+    lp=runner/f'{lang}.lproj'/'InfoPlist.strings'
+    if not lp.exists() or 'CFBundleDisplayName = "MleySoft Aidat";' not in lp.read_text(encoding='utf-8'):
+        raise SystemExit(f'ERROR: {lang} localized app name config')
 verify=pbx.read_text(encoding='utf-8'); bc=verify.count(bundle); ec=verify.count('CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;')
 if bc<3 or ec<bc: raise SystemExit(f'ERROR entitlement binding {bc}/{ec}')
 if 'MleySoft Firebase Plist' not in verify: raise SystemExit('ERROR Firebase build phase')

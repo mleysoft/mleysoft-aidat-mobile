@@ -7,7 +7,7 @@ if [ -d "mobile_app" ] && [ -f "mobile_app/pubspec.yaml" ]; then
 fi
 
 echo "========================================"
-echo " MLEYSOFT AIDAT CLEAN IOS PREBUILD V107"
+echo " MLEYSOFT AIDAT CLEAN IOS PREBUILD V114"
 echo "========================================"
 
 echo "1) Eski iOS klasoru siliniyor..."
@@ -37,7 +37,7 @@ echo "5) Signing gerektirmeyen kaynak kontrolleri..."
 test -f ios/Runner/GoogleService-Info.plist
 /usr/libexec/PlistBuddy -c 'Print :BUNDLE_ID' ios/Runner/GoogleService-Info.plist | grep -q '^com.mleysoft.aidat$'
 
-/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' ios/Runner/Info.plist | grep -q '^MleySoft Aidat$'
+/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' ios/Runner/Info.plist | grep -q '^MS Aidat$'
 /usr/libexec/PlistBuddy -c 'Print :CFBundleName' ios/Runner/Info.plist | grep -q '^Runner$'
 
 test -f ios/Runner/Runner.entitlements
@@ -56,9 +56,9 @@ grep -q "s.dependency 'FirebaseMessaging'" packages/mleysoft_native_bridge/ios/m
 
 echo ""
 echo "########################################"
-echo "PREBUILD SUCCESS V107"
+echo "PREBUILD SUCCESS V114"
 echo " - iOS fresh generated"
-echo " - Name = MleySoft Aidat"
+echo " - Name = MS Aidat"
 echo " - CFBundleName = Runner"
 echo " - Bundle = com.mleysoft.aidat"
 echo " - APNs entitlement source = production"

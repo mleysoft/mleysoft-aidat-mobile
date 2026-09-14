@@ -70,7 +70,7 @@ public final class MleySoftNativeBridgePlugin: NSObject, FlutterPlugin, Messagin
     }
   }
 
-  private func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+  public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     switch call.method {
     case "requestPermission":
       requestNotificationPermission(result)

@@ -58,8 +58,11 @@ if phase_id not in text:
     if not target: raise SystemExit('ERROR: Runner target buildPhases yok')
     phases=target.group(2)+f'\n\t\t\t\t{phase_id} /* {phase_name} */,'
     text=text[:target.start(2)]+phases+text[target.end(2):]
+    # project.pbxproj shellScript must contain exactly one escaped \\n per line.
+    # Do NOT escape backslashes a second time; that makes Xcode execute literal
+    # `\\n` characters and corrupts `set -e`.
     shell='set -e\\nSRC="$SRCROOT/Runner/GoogleService-Info.plist"\\nDST="$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/GoogleService-Info.plist"\\ntest -f "$SRC"\\nmkdir -p "$(dirname "$DST")"\\ncp "$SRC" "$DST"\\n'
-    esc=shell.replace('\\','\\\\').replace('"','\\"')
+    esc=shell.replace('"','\\"')
     phase=f'\t\t{phase_id} /* {phase_name} */ = {{isa = PBXShellScriptBuildPhase; alwaysOutOfDate = 1; buildActionMask = 2147483647; files = (); inputPaths = (); name = "MleySoft Firebase Plist"; outputPaths = (); runOnlyForDeploymentPostprocessing = 0; shellPath = /bin/sh; shellScript = "{esc}"; }};\n'
     marker='/* End PBXShellScriptBuildPhase section */'
     if marker not in text: raise SystemExit('ERROR: PBXShellScriptBuildPhase section yok')

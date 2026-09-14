@@ -40,9 +40,14 @@ class PushService {
   static Future<void> requestSystemPermission() async {
     if (_permissionAsked) return;
     _permissionAsked = true;
-    if (Platform.isAndroid) {
-      try { await _native.invokeMethod('requestPermission'); } catch (_) {}
-    }
+    try {
+      if (Platform.isIOS) {
+        await _native.invokeMethod('requestNotificationPermission');
+        await _native.invokeMethod('registerForRemoteNotifications');
+      } else if (Platform.isAndroid) {
+        await _native.invokeMethod('requestPermission');
+      }
+    } catch (_) {}
   }
 
   static Future<void> _setupTapHandlers() async {
@@ -71,12 +76,31 @@ class PushService {
   static Future<Map<String,String>?> _tokenSnapshot() async {
     try {
       String apns = '';
+      String fcm = '';
+
       if (Platform.isIOS) {
-        apns = (await FirebaseMessaging.instance.getAPNSToken()) ?? '';
-        if (apns.isEmpty) return null;
+        // First try FlutterFire exactly as normal.
+        try { apns = (await FirebaseMessaging.instance.getAPNSToken()) ?? ''; } catch (_) {}
+        try { fcm = (await FirebaseMessaging.instance.getToken()) ?? ''; } catch (_) {}
+
+        // Working MleySoft IK fallback:
+        // ask FirebaseMessaging native SDK directly through an iOS Flutter plugin.
+        if (apns.isEmpty || fcm.isEmpty) {
+          try {
+            final native = await _native.invokeMapMethod<String,dynamic>('getNativePushTokens');
+            final nativeApns = '${native?['apns_token'] ?? ''}';
+            final nativeFcm = '${native?['fcm_token'] ?? ''}';
+            if (apns.isEmpty && nativeApns.isNotEmpty) apns = nativeApns;
+            if (fcm.isEmpty && nativeFcm.isNotEmpty) fcm = nativeFcm;
+          } catch (_) {}
+        }
+
+        if (apns.isEmpty || fcm.isEmpty) return null;
+      } else {
+        fcm = (await FirebaseMessaging.instance.getToken()) ?? '';
+        if (fcm.isEmpty) return null;
       }
-      final fcm = (await FirebaseMessaging.instance.getToken()) ?? '';
-      if (fcm.isEmpty) return null;
+
       final app = Firebase.app();
       return {
         'fcm': fcm,
@@ -85,6 +109,16 @@ class PushService {
         'app_id': app.options.appId,
         'sender_id': app.options.messagingSenderId,
       };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<Map<String,dynamic>?> nativeStatus() async {
+    if (!Platform.isIOS) return null;
+    try {
+      final v = await _native.invokeMapMethod<String,dynamic>('getAPNsRegistrationStatus');
+      return v == null ? null : Map<String,dynamic>.from(v);
     } catch (_) {
       return null;
     }
@@ -100,6 +134,9 @@ class PushService {
       // TestFlight ilk açılışında APNs token gecikebilir; 3 dakika sessizce tekrar dene.
       for (var i = 0; i < 90; i++) {
         if (_loggingOut || !await _hasAppSession()) return;
+        if (Platform.isIOS && i % 5 == 0) {
+          try { await _native.invokeMethod('registerForRemoteNotifications'); } catch (_) {}
+        }
         final snapshot = await _tokenSnapshot();
         if (snapshot != null) {
           await register(snapshot);

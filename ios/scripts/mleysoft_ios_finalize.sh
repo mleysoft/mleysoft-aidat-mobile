@@ -2,10 +2,10 @@
 set -euo pipefail
 
 echo "========================================"
-echo " MLEYSOFT AIDAT IOS FINALIZER V102"
+echo " MLEYSOFT AIDAT IOS FINALIZER V103"
 echo "========================================"
 
-VISIBLE_NAME=$'MleySoft\u00A0Aidat'
+VISIBLE_NAME="MleySoft Aidat"
 SRC_INFO="${SRCROOT}/Runner/Info.plist"
 BUILT_INFO="${TARGET_BUILD_DIR}/${INFOPLIST_PATH}"
 APP_DIR="${TARGET_BUILD_DIR}/${WRAPPER_NAME}"
@@ -17,19 +17,13 @@ set_plist() {
   /usr/libexec/PlistBuddy -c "Add :${key} string ${value}" "$file"
 }
 
+# Exact ASCII-space display name. CFBundleName remains Runner.
 set_plist "$SRC_INFO" "CFBundleDisplayName" "$VISIBLE_NAME"
-set_plist "$SRC_INFO" "CFBundleName" "$VISIBLE_NAME"
+set_plist "$SRC_INFO" "CFBundleName" "Runner"
 
 if [ -f "$BUILT_INFO" ]; then
   set_plist "$BUILT_INFO" "CFBundleDisplayName" "$VISIBLE_NAME"
-  set_plist "$BUILT_INFO" "CFBundleName" "$VISIBLE_NAME"
-fi
-
-if [ -d "$APP_DIR" ]; then
-  for LOC in tr en Base; do
-    mkdir -p "${APP_DIR}/${LOC}.lproj"
-    printf 'CFBundleDisplayName = "%s";\nCFBundleName = "%s";\n' "$VISIBLE_NAME" "$VISIBLE_NAME" > "${APP_DIR}/${LOC}.lproj/InfoPlist.strings"
-  done
+  set_plist "$BUILT_INFO" "CFBundleName" "Runner"
 fi
 
 if [ ! -f "$GOOGLE_INFO" ]; then
@@ -47,14 +41,13 @@ if [ -d "$APP_DIR" ]; then
   cp "$GOOGLE_INFO" "${APP_DIR}/GoogleService-Info.plist"
 fi
 
-if [ "$CONFIGURATION" = "Release" ] || [ "$CONFIGURATION" = "Profile" ]; then
-  APS=$(/usr/libexec/PlistBuddy -c "Print :aps-environment" "${SRCROOT}/Runner/Runner.entitlements" 2>/dev/null || true)
-  if [ "$APS" != "production" ]; then
-    echo "ERROR: Release/Profile aps-environment production degil: $APS"
-    exit 65
-  fi
+APS=$(/usr/libexec/PlistBuddy -c "Print :aps-environment" "${SRCROOT}/Runner/Runner.entitlements" 2>/dev/null || true)
+if [ "$APS" != "production" ]; then
+  echo "ERROR: aps-environment production degil: $APS"
+  exit 65
 fi
 
 echo "FINALIZER OK"
-echo "Visual name: MleySoft Aidat (NBSP)"
+echo "Name: MleySoft Aidat"
+echo "CFBundleName: Runner"
 echo "Firebase bundle: $FIREBASE_BUNDLE"

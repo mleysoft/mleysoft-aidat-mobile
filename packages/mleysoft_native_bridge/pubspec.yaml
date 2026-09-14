@@ -1,0 +1,14 @@
+name: mleysoft_native_bridge
+description: MleySoft Aidat iOS APNs/Firebase native bridge.
+version: 1.0.0
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+  flutter: '>=3.22.0'
+dependencies:
+  flutter:
+    sdk: flutter
+flutter:
+  plugin:
+    platforms:
+      ios:
+        pluginClass: MleySoftNativeBridgePlugin

@@ -1,5 +1,5 @@
 name: mleysoft_aidat
-version: 1.0.0+102
+version: 1.0.0+103
 publish_to: none
 description: MleySoft Aidat Takip native Flutter uygulaması.
 environment:
@@ -7,6 +7,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  mleysoft_native_bridge:
+    path: packages/mleysoft_native_bridge
   cupertino_icons: ^1.0.8
   http: ^1.2.2
   flutter_secure_storage: ^9.2.2

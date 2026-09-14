@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'core/api.dart';import 'core/loading.dart';import 'core/push.dart';import 'core/ui.dart';import 'screens/login.dart';import 'screens/shell.dart';import 'screens/manager_shell.dart';import 'screens/admin_shell.dart';
 Future<void> main()async{WidgetsFlutterBinding.ensureInitialized();runApp(const MleySoftApp());}
@@ -16,4 +17,19 @@ class MleySoftApp extends StatelessWidget{const MleySoftApp({super.key});@overri
   outlinedButtonTheme:OutlinedButtonThemeData(style:OutlinedButton.styleFrom(foregroundColor:ink,minimumSize:const Size(0,48),side:const BorderSide(color:line),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)),textStyle:const TextStyle(fontWeight:FontWeight.w800))),
   textButtonTheme:TextButtonThemeData(style:TextButton.styleFrom(foregroundColor:ink,textStyle:const TextStyle(fontWeight:FontWeight.w800)))
 ),home:const Boot());}
-class Boot extends StatefulWidget{const Boot({super.key});@override State<Boot> createState()=>_BootState();}class _BootState extends State<Boot>{bool? ok;String? role;@override void initState(){super.initState();PushService.init(registerToken:false);check();}Future<void>check()async{final t=await Api.token();if(t==null||t.isEmpty){await PushService.disableWhileLoggedOut();ok=false;if(mounted)setState((){});return;}role=await Api.role();try{final me=await Api.request('me');role=me['user']?['role']?.toString()??role; if(role!=null)await Api.saveRole(role!);ok=true;await PushService.init();}on ApiException catch(e){if(e.statusCode==401){await Api.clear();ok=false;}else if(role!=null){ok=true;}else{ok=false;}}catch(_){if(role!=null){ok=true;}else{ok=false;}}if(mounted)setState((){});}@override Widget build(BuildContext c){if(ok==null)return const Scaffold(backgroundColor:Colors.white,body:BrandLoader());if(!ok!)return const LoginScreen();if(role=='super_admin')return const AdminShell();if(role=='manager')return const ManagerShell();return const AppShell();}}
+class Boot extends StatefulWidget{const Boot({super.key});@override State<Boot> createState()=>_BootState();}
+class _BootState extends State<Boot>{
+ bool? ok;String? role;
+ @override void initState(){super.initState();check();}
+ Future<void>check()async{
+   final t=await Api.token();
+   if(t==null||t.isEmpty){ok=false;if(mounted)setState((){});unawaited(PushService.disableWhileLoggedOut());unawaited(PushService.init(registerToken:false));return;}
+   role=await Api.role();
+   try{final me=await Api.request('me').timeout(const Duration(seconds:12));role=me['user']?['role']?.toString()??role;if(role!=null)await Api.saveRole(role!);ok=true;}
+   on ApiException catch(e){if(e.statusCode==401){await Api.clear();ok=false;}else{ok=role!=null;}}
+   on TimeoutException{ok=role!=null;}catch(_){ok=role!=null;}
+   if(mounted)setState((){});
+   if(ok==true)unawaited(PushService.init());
+ }
+ @override Widget build(BuildContext c){if(ok==null)return const Scaffold(backgroundColor:Colors.white,body:BrandLoader());if(!ok!)return const LoginScreen();if(role=='super_admin')return const AdminShell();if(role=='manager')return const ManagerShell();return const AppShell();}
+}

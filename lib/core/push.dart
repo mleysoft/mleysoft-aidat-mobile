@@ -229,14 +229,14 @@ class PushService {
     } catch (_) {}
 
     // Then invalidate the Firebase installation token on this phone.
-    try { await FirebaseMessaging.instance.deleteToken(); } catch (_) {}
+    try { await FirebaseMessaging.instance.deleteToken().timeout(const Duration(seconds:3)); } catch (_) {}
   }
 
   static Future<void> disableWhileLoggedOut() async {
     _loggingOut = true;
     _pendingOpen = null;
     try {
-      if (_ready) await FirebaseMessaging.instance.deleteToken();
+      if (_ready) await FirebaseMessaging.instance.deleteToken().timeout(const Duration(seconds:3));
     } catch (_) {}
   }
 }

@@ -16,7 +16,7 @@ if fb.get('BUNDLE_ID')!='com.mleysoft.aidat': raise SystemExit('ERROR: Firebase 
 # Info.plist - same strategy as working IK
 info_path=runner/'Info.plist'
 with info_path.open('rb') as f: info=plistlib.load(f)
-info['CFBundleDisplayName']='MleySoft Aidat'; info['CFBundleName']='Runner'
+info['CFBundleDisplayName']='MS Aidat'; info['CFBundleName']='Runner'
 modes=list(info.get('UIBackgroundModes',[]))
 for mode in ['fetch','remote-notification']:
     if mode not in modes: modes.append(mode)
@@ -37,8 +37,8 @@ for lang in ["tr", "en"]:
     lproj = runner / f"{lang}.lproj"
     lproj.mkdir(parents=True, exist_ok=True)
     (lproj / "InfoPlist.strings").write_text(
-        'CFBundleDisplayName = "MleySoft Aidat";\n'
-        'CFBundleName = "MleySoft Aidat";\n',
+        'CFBundleDisplayName = "MS Aidat";\n'
+        'CFBundleName = "MS Aidat";\n',
         encoding="utf-8"
     )
 # pbx
@@ -49,7 +49,7 @@ for old in set(re.findall(r'PRODUCT_BUNDLE_IDENTIFIER = ([^;]+);',text)):
         text=text.replace(f'PRODUCT_BUNDLE_IDENTIFIER = {old};','PRODUCT_BUNDLE_IDENTIFIER = com.mleysoft.aidat;')
 text=re.sub(r'PRODUCT_NAME = [^;]+;','PRODUCT_NAME = Runner;',text)
 if 'INFOPLIST_KEY_CFBundleDisplayName' in text:
-    text=re.sub(r'INFOPLIST_KEY_CFBundleDisplayName = [^;]+;','INFOPLIST_KEY_CFBundleDisplayName = "MleySoft Aidat";',text)
+    text=re.sub(r'INFOPLIST_KEY_CFBundleDisplayName = [^;]+;','INFOPLIST_KEY_CFBundleDisplayName = "MS Aidat";',text)
 text=re.sub(r'IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+;','IPHONEOS_DEPLOYMENT_TARGET = 15.0;',text)
 pbx.write_text(text,encoding='utf-8')
 # entitlement
@@ -140,15 +140,15 @@ import FirebaseMessaging
 ''',encoding='utf-8')
 # verify
 with info_path.open('rb') as f: vi=plistlib.load(f)
-if vi.get('CFBundleDisplayName')!='MleySoft Aidat' or vi.get('CFBundleName')!='Runner': raise SystemExit('ERROR: app name config')
+if vi.get('CFBundleDisplayName')!='MS Aidat' or vi.get('CFBundleName')!='Runner': raise SystemExit('ERROR: app name config')
 for lang in ['tr','en']:
     lp=runner/f'{lang}.lproj'/'InfoPlist.strings'
-    if not lp.exists() or 'CFBundleDisplayName = "MleySoft Aidat";' not in lp.read_text(encoding='utf-8'):
+    if not lp.exists() or 'CFBundleDisplayName = "MS Aidat";' not in lp.read_text(encoding='utf-8'):
         raise SystemExit(f'ERROR: {lang} localized app name config')
 verify=pbx.read_text(encoding='utf-8'); bc=verify.count(bundle); ec=verify.count('CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;')
 if bc<3 or ec<bc: raise SystemExit(f'ERROR entitlement binding {bc}/{ec}')
 if 'MleySoft Firebase Plist' not in verify: raise SystemExit('ERROR Firebase build phase')
 print('AIDAT IOS CONFIG OK')
-print('Display Name: MleySoft Aidat')
+print('Display Name: MS Aidat')
 print('CFBundleName: Runner')
 print(f'Bundle configs={bc} entitlement configs={ec}')

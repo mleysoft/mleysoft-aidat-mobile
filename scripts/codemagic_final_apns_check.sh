@@ -33,7 +33,7 @@ BUNDLE_ID=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.pl
 
 echo "FINAL NAME=[$NAME] BUNDLE_NAME=[$BUNDLE_NAME] BUNDLE=[$BUNDLE_ID]"
 
-if [ "$NAME" != "MleySoft Aidat" ]; then
+if [ "$NAME" != "MS Aidat" ]; then
   echo "ERROR: FINAL APP NAME WRONG"
   exit 1
 fi
@@ -54,7 +54,7 @@ for LANG in tr en; do
     echo "ERROR: FINAL localized app name missing: $LANG"
     exit 1
   fi
-  if ! grep -q 'CFBundleDisplayName = "MleySoft Aidat";' "$LOC"; then
+  if ! grep -q 'CFBundleDisplayName = "MS Aidat";' "$LOC"; then
     echo "ERROR: FINAL localized display name wrong: $LANG"
     cat "$LOC" || true
     exit 1
@@ -99,8 +99,8 @@ fi
 
 echo ""
 echo "########################################"
-echo "FINAL IPA SUCCESS V111"
-echo " - Name = MleySoft Aidat"
+echo "FINAL IPA SUCCESS V112"
+echo " - Name = MS Aidat"
 echo " - CFBundleName = Runner"
 echo " - Bundle = com.mleysoft.aidat"
 echo " - Firebase plist = com.mleysoft.aidat"

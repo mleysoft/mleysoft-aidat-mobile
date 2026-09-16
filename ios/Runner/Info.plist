@@ -71,5 +71,16 @@
 			</array>
 		</dict>
 	</dict>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.mleysoft.aidat.payment</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>mleysoftaidat</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

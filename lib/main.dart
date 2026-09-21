@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'core/api.dart';import 'core/loading.dart';import 'core/push.dart';import 'core/ui.dart';import 'screens/login.dart';import 'screens/shell.dart';import 'screens/manager_shell.dart';import 'screens/admin_shell.dart';
+import 'core/api.dart';
+import 'core/network_guard.dart';import 'core/loading.dart';import 'core/push.dart';import 'core/ui.dart';import 'screens/login.dart';import 'screens/shell.dart';import 'screens/manager_shell.dart';import 'screens/admin_shell.dart';
 Future<void> main()async{WidgetsFlutterBinding.ensureInitialized();runApp(const MleySoftApp());}
 class MleySoftApp extends StatelessWidget{const MleySoftApp({super.key});@override Widget build(BuildContext c)=>MaterialApp(debugShowCheckedModeBanner:false,title:'MleySoft Aidat',theme:ThemeData(
   useMaterial3:true,
@@ -16,7 +17,7 @@ class MleySoftApp extends StatelessWidget{const MleySoftApp({super.key});@overri
   filledButtonTheme:FilledButtonThemeData(style:FilledButton.styleFrom(backgroundColor:ink,foregroundColor:Colors.white,minimumSize:const Size(0,52),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)),textStyle:const TextStyle(fontWeight:FontWeight.w800))),
   outlinedButtonTheme:OutlinedButtonThemeData(style:OutlinedButton.styleFrom(foregroundColor:ink,minimumSize:const Size(0,48),side:const BorderSide(color:line),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)),textStyle:const TextStyle(fontWeight:FontWeight.w800))),
   textButtonTheme:TextButtonThemeData(style:TextButton.styleFrom(foregroundColor:ink,textStyle:const TextStyle(fontWeight:FontWeight.w800)))
-),home:const Boot());}
+),home:const NetworkGuard(child:Boot()));}
 class Boot extends StatefulWidget{const Boot({super.key});@override State<Boot> createState()=>_BootState();}
 class _BootState extends State<Boot>{
  bool? ok;String? role;

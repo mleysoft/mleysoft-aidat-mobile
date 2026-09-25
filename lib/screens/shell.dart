@@ -108,12 +108,217 @@ Widget build(BuildContext c) {
 }
 }
 
-class ResidentHeader extends StatelessWidget{final String title,subtitle;final IconData icon;const ResidentHeader(this.title,this.subtitle,this.icon,{super.key});@override Widget build(BuildContext c)=>Padding(padding:const EdgeInsets.fromLTRB(20,18,20,14),child:Row(children:[IconBubble(icon,blue),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(fontSize:25,fontWeight:FontWeight.w900,letterSpacing:-.6,color:ink)),const SizedBox(height:2),Text(subtitle,style:const TextStyle(color:muted,fontSize:12))]))]));}
+class ResidentHeader extends StatelessWidget {
+  final String title, subtitle;
+  final IconData icon;
+  const ResidentHeader(this.title, this.subtitle, this.icon, {super.key});
 
-class HomePage extends StatefulWidget{const HomePage({super.key});@override State<HomePage> createState()=>_HomePageState();}
-class _HomePageState extends State<HomePage> with WidgetsBindingObserver{Map<String,dynamic>? d;String? error;Future<void>load()async{try{final a=await Api.request('dashboard'),m=await Api.request('me');d={...a,'me':m['user']};final uv=a['stats']?['unread_announcements'];residentUnreadAnnouncements.value=uv is num?uv.toInt():0;error=null;}catch(e){error='$e'.replaceFirst('Exception: ','');}if(mounted)setState((){});}@override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);load();}@override void dispose(){WidgetsBinding.instance.removeObserver(this);super.dispose();}@override void didChangeAppLifecycleState(AppLifecycleState state){if(state==AppLifecycleState.resumed)load();}
-@override Widget build(BuildContext c){if(d==null&&error==null)return const Center(child:BrandLoader());if(error!=null)return Center(child:Text(error!));final s=Map<String,dynamic>.from(d!['stats']??{}),me=Map<String,dynamic>.from(d!['me']??{}),recent=(d!['recent'] as List?)??[];return RefreshIndicator(onRefresh:load,child:ListView(padding:const EdgeInsets.only(bottom:110),children:[Padding(padding:const EdgeInsets.fromLTRB(20,18,20,0),child:Container(padding:const EdgeInsets.all(22),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF0B1220),Color(0xFF26354D)],begin:Alignment.topLeft,end:Alignment.bottomRight),borderRadius:BorderRadius.circular(28),boxShadow:const[BoxShadow(color:Color(0x25101828),blurRadius:28,offset:Offset(0,14))]),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[Container(width:48,height:48,decoration:BoxDecoration(color:brand,borderRadius:BorderRadius.circular(16)),child:const Icon(Icons.home_work_rounded,color:ink)),const Spacer(),const StatusPill('AKTİF',brand)]),const SizedBox(height:20),Text('${me['site_name']??'Sitem'}',style:const TextStyle(color:Colors.white,fontSize:23,fontWeight:FontWeight.w900,letterSpacing:-.5)),const SizedBox(height:5),Text('${me['name']??''}  •  ${me['apartment']??'Daire Sakini'}',style:const TextStyle(color:Color(0xFFD0D5DD),fontSize:12,fontWeight:FontWeight.w600))]))),Padding(padding:const EdgeInsets.fromLTRB(20,16,20,0),child:_ManagerPaymentCard(Map<String,dynamic>.from(d!['manager_payment_info']??{}))),if(d!['active_due']!=null)Padding(padding:const EdgeInsets.fromLTRB(20,16,20,0),child:_ActiveDueCard(Map<String,dynamic>.from(d!['active_due']))),const ResidentHeader('Finansal Durum','Aidat ve ödeme durumunuzun güncel özeti',Icons.insights_rounded),Padding(padding:const EdgeInsets.symmetric(horizontal:20),child:GridView.count(crossAxisCount:2,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisSpacing:12,mainAxisSpacing:12,childAspectRatio:1.12,children:[MetricCard(label:'Toplam Borcum',value:tl(s['debt']),icon:Icons.account_balance_wallet_rounded,color:danger),MetricCard(label:'Toplam Ödenen',value:tl(s['paid']),icon:Icons.verified_rounded,color:success),MetricCard(label:'Bu Ay Kalan',value:tl(s['this_month']),icon:Icons.calendar_month_rounded,color:orange),ValueListenableBuilder<int>(valueListenable:residentUnreadAnnouncements,builder:(_,v,__)=>MetricCard(label:'Yeni Duyuru',value:'$v',icon:Icons.notifications_active_rounded,color:violet))])),const Padding(padding:EdgeInsets.fromLTRB(20,26,20,10),child:Text('Son Aidat Hareketleri',style:TextStyle(fontSize:19,fontWeight:FontWeight.w900,color:ink))),...recent.map((x){final r=Map<String,dynamic>.from(x);final due=nv(r['balance'])>0;return Padding(padding:const EdgeInsets.fromLTRB(20,0,20,10),child:SoftCard(onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>DueDetailPage(dueId:int.parse('${r['id']}')))),child:Row(children:[IconBubble(due?Icons.schedule_rounded:Icons.check_rounded,due?orange:success),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('${r['period']??''}',style:const TextStyle(fontWeight:FontWeight.w900,color:ink)),const SizedBox(height:3),Text('${r['apartment']??''} • Ref: ${r['reference']??'-'}',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11,color:muted))])),Column(crossAxisAlignment:CrossAxisAlignment.end,children:[Text(tl(r['amount']),style:const TextStyle(fontWeight:FontWeight.w900,color:ink)),const SizedBox(height:4),StatusPill(due?'${tl(r['balance'])} kaldı':'Ödendi',due?danger:success)])])));})]));}}
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 12),
+        child: Row(
+          children: [
+            IconBubble(icon, blue),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -.4, color: ink)),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: const TextStyle(color: muted, fontSize: 11.5, height: 1.3, fontWeight: FontWeight.w600)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+}
 
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
+  Map<String, dynamic>? d;
+  String? error;
+
+  Future<void> load() async {
+    try {
+      final a = await Api.request('dashboard');
+      final m = await Api.request('me');
+      d = {...a, 'me': m['user']};
+      final uv = a['stats']?['unread_announcements'];
+      residentUnreadAnnouncements.value = uv is num ? uv.toInt() : 0;
+      error = null;
+    } catch (e) {
+      error = '$e'.replaceFirst('Exception: ', '');
+    }
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    load();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) load();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (d == null && error == null) return const Center(child: BrandLoader());
+    if (error != null) return Center(child: Text(error!));
+
+    final stats = Map<String, dynamic>.from(d!['stats'] ?? {});
+    final me = Map<String, dynamic>.from(d!['me'] ?? {});
+    final recent = (d!['recent'] as List?) ?? [];
+
+    return RefreshIndicator(
+      onRefresh: load,
+      child: ListView(
+        padding: const EdgeInsets.only(bottom: 110),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 14, 18, 0),
+            child: Container(
+              padding: const EdgeInsets.all(19),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF101828), Color(0xFF2D3A50)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(22),
+                boxShadow: const [BoxShadow(color: Color(0x1D101828), blurRadius: 22, offset: Offset(0, 10))],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(color: brand, borderRadius: BorderRadius.circular(13)),
+                        child: const Icon(Icons.home_work_rounded, color: ink, size: 22),
+                      ),
+                      const Spacer(),
+                      const StatusPill('AKTİF', brand),
+                    ],
+                  ),
+                  const SizedBox(height: 15),
+                  Text(
+                    '${me['site_name'] ?? 'Sitem'}',
+                    style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900, letterSpacing: -.45),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${me['name'] ?? ''}  •  ${me['apartment'] ?? 'Daire Sakini'}',
+                    style: const TextStyle(color: Color(0xFFD0D5DD), fontSize: 11.5, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
+            child: _ManagerPaymentCard(Map<String, dynamic>.from(d!['manager_payment_info'] ?? {})),
+          ),
+          if (d!['active_due'] != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
+              child: _ActiveDueCard(Map<String, dynamic>.from(d!['active_due'])),
+            ),
+          const ResidentHeader('Finansal Durum', 'Aidat ve ödeme durumunuzun güncel özeti', Icons.insights_rounded),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: ValueListenableBuilder<int>(
+              valueListenable: residentUnreadAnnouncements,
+              builder: (_, unread, __) => SummaryScroller(children: [
+                CompactStatCard(
+                  label: 'Toplam Borcum',
+                  value: tl(stats['debt']),
+                  icon: Icons.account_balance_wallet_outlined,
+                  color: danger,
+                ),
+                CompactStatCard(
+                  label: 'Toplam Ödenen',
+                  value: tl(stats['paid']),
+                  icon: Icons.verified_outlined,
+                  color: success,
+                ),
+                CompactStatCard(
+                  label: 'Bu Ay Kalan',
+                  value: tl(stats['this_month']),
+                  icon: Icons.calendar_month_outlined,
+                  color: orange,
+                ),
+                CompactStatCard(
+                  label: 'Yeni Duyuru',
+                  value: '$unread',
+                  icon: Icons.notifications_active_outlined,
+                  color: violet,
+                ),
+              ]),
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(18, 24, 18, 8),
+            child: SectionHeading(
+              'Son Aidat Hareketleri',
+              subtitle: 'En güncel tahakkuk ve kalan borç durumunuz.',
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: ProfessionalDataTable(
+              minWidth: 690,
+              emptyText: 'Henüz aidat hareketi bulunmuyor.',
+              columns: const [
+                DataColumn(label: Text('DÖNEM')),
+                DataColumn(label: Text('DAİRE')),
+                DataColumn(label: Text('AİDAT'), numeric: true),
+                DataColumn(label: Text('KALAN'), numeric: true),
+                DataColumn(label: Text('DURUM')),
+              ],
+              rows: recent.map<DataRow>((x) {
+                final row = Map<String, dynamic>.from(x);
+                final balance = nv(row['balance']);
+                final due = balance > .009;
+                return DataRow(
+                  onSelectChanged: (_) => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => DueDetailPage(dueId: int.parse('${row['id']}'))),
+                  ),
+                  cells: [
+                    DataCell(TableText('${row['period'] ?? '-'}', strong: true)),
+                    DataCell(TableText('${row['apartment'] ?? '-'}')),
+                    DataCell(TableAmount(tl(row['amount']))),
+                    DataCell(TableAmount(tl(balance), color: due ? danger : success)),
+                    DataCell(StatusPill(due ? 'BORÇ VAR' : 'ÖDENDİ', due ? danger : success)),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _ManagerPaymentCard extends StatelessWidget{
  final Map<String,dynamic> info;const _ManagerPaymentCard(this.info);
@@ -125,7 +330,189 @@ class _ManagerPaymentCard extends StatelessWidget{
 class ModernList extends StatefulWidget{final String path,title,subtitle;final IconData icon;final Widget Function(Map<String,dynamic>) builder;const ModernList({super.key,required this.path,required this.title,required this.subtitle,required this.icon,required this.builder});@override State<ModernList> createState()=>_ModernListState();}
 class _ModernListState extends State<ModernList> with WidgetsBindingObserver{bool busy=true;String? error;List items=[];Future<void>load()async{if(mounted)setState(()=>busy=true);try{final d=await Api.request(widget.path);items=d['items']??[];error=null;}catch(e){error='$e'.replaceFirst('Exception: ','');}if(mounted)setState(()=>busy=false);}@override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);load();}@override void dispose(){WidgetsBinding.instance.removeObserver(this);super.dispose();}@override void didChangeAppLifecycleState(AppLifecycleState state){if(state==AppLifecycleState.resumed)load();}@override Widget build(BuildContext c){if(busy)return const Center(child:BrandLoader());return RefreshIndicator(onRefresh:load,child:ListView(padding:const EdgeInsets.only(bottom:110),children:[ResidentHeader(widget.title,widget.subtitle,widget.icon),if(error!=null)Padding(padding:const EdgeInsets.all(20),child:SoftCard(child:Text(error!,style:const TextStyle(color:danger))))else if(items.isEmpty)emptyState('Henüz kayıt bulunmuyor',widget.icon)else ...items.map((x)=>Padding(padding:const EdgeInsets.fromLTRB(20,0,20,10),child:widget.builder(Map<String,dynamic>.from(x))))]));}}
 
-class DuesPage extends StatelessWidget{const DuesPage({super.key});@override Widget build(BuildContext c)=>ModernList(path:'dues',title:'Aidatlarım',subtitle:'Borç, dönem ve referans bilgilerinizi takip edin',icon:Icons.account_balance_wallet_rounded,builder:(r){final due=nv(r['balance'])>0;return SoftCard(onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>DueDetailPage(dueId:int.parse('${r['id']}')))),child:Column(children:[Row(children:[IconBubble(Icons.calendar_month_rounded,due?orange:success),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('${r['period']??''}',style:const TextStyle(fontSize:16,fontWeight:FontWeight.w900,color:ink)),Text('${r['apartment']??''}',style:const TextStyle(fontSize:12,color:muted))])),StatusPill(due?'BORÇ VAR':'ÖDENDİ',due?danger:success)]),const Divider(height:24),Row(children:[Expanded(child:_mini('Aidat',tl(r['amount']))),Expanded(child:_mini('Kalan',tl(r['balance'])))]),const SizedBox(height:10),Align(alignment:Alignment.centerLeft,child:Text('Referans: ${r['reference']??'-'}',style:const TextStyle(fontSize:11,color:muted,fontWeight:FontWeight.w600))) ]));});}
+class DuesPage extends StatefulWidget {
+  const DuesPage({super.key});
+  @override
+  State<DuesPage> createState() => _DuesPageState();
+}
+
+class _DuesPageState extends State<DuesPage> with WidgetsBindingObserver {
+  bool busy = true;
+  String? error;
+  List<Map<String, dynamic>> items = [];
+  String period = '';
+  String status = 'all';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    load();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) load();
+  }
+
+  Future<void> load() async {
+    if (mounted) setState(() => busy = true);
+    try {
+      final d = await Api.request('dues');
+      items = List<Map<String, dynamic>>.from(
+        (d['items'] as List? ?? []).map((e) => Map<String, dynamic>.from(e)),
+      );
+      error = null;
+    } catch (e) {
+      error = '$e'.replaceFirst('Exception: ', '');
+    }
+    if (mounted) setState(() => busy = false);
+  }
+
+  List<String> get periods {
+    final values = <String>[];
+    for (final row in items) {
+      final p = '${row['period'] ?? ''}'.trim();
+      if (p.isNotEmpty && !values.contains(p)) values.add(p);
+    }
+    return values;
+  }
+
+  List<Map<String, dynamic>> get shown => items.where((r) {
+        final balance = nv(r['balance']);
+        final matchesPeriod = period.isEmpty || '${r['period'] ?? ''}' == period;
+        final matchesStatus = status == 'all' || (status == 'open' ? balance > .009 : balance <= .009);
+        return matchesPeriod && matchesStatus;
+      }).toList();
+
+  double sumOf(Iterable<Map<String, dynamic>> rows, String key) => rows.fold<double>(0, (a, r) => a + nv(r[key]));
+
+  @override
+  Widget build(BuildContext context) {
+    if (busy) return const Center(child: BrandLoader());
+    if (error != null) {
+      return RefreshIndicator(
+        onRefresh: load,
+        child: ListView(
+          children: [
+            const ResidentHeader('Aidatlarım', 'Borç, dönem ve referans bilgilerinizi takip edin', Icons.account_balance_wallet_rounded),
+            Padding(padding: const EdgeInsets.all(18), child: SoftCard(child: Text(error!, style: const TextStyle(color: danger)))),
+          ],
+        ),
+      );
+    }
+
+    final filtered = shown;
+    final total = sumOf(filtered, 'amount');
+    final paid = sumOf(filtered, 'paid');
+    final debt = sumOf(filtered, 'balance');
+
+    return RefreshIndicator(
+      onRefresh: load,
+      child: ListView(
+        padding: const EdgeInsets.only(bottom: 110),
+        children: [
+          const ResidentHeader('Aidatlarım', 'Dönem bazlı tahakkuk, ödeme ve kalan borcunuzu inceleyin', Icons.account_balance_wallet_rounded),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: SummaryScroller(children: [
+              CompactStatCard(label: 'Toplam Aidat', value: tl(total), icon: Icons.receipt_long_outlined, color: blue),
+              CompactStatCard(label: 'Ödenen', value: tl(paid), icon: Icons.check_circle_outline_rounded, color: success),
+              CompactStatCard(label: 'Kalan Borç', value: tl(debt), icon: Icons.warning_amber_rounded, color: debt > .009 ? danger : success),
+            ]),
+          ),
+          const SizedBox(height: 14),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'all', label: Text('Tümü')),
+                ButtonSegment(value: 'open', label: Text('Borçlu')),
+                ButtonSegment(value: 'paid', label: Text('Ödendi')),
+              ],
+              selected: {status},
+              onSelectionChanged: (v) => setState(() => status = v.first),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: FilterSurface(
+              subtitle: '${filtered.length} / ${items.length} aidat gösteriliyor',
+              children: [
+                DropdownButtonFormField<String>(
+                  value: period,
+                  decoration: const InputDecoration(labelText: 'Dönem'),
+                  items: [
+                    const DropdownMenuItem(value: '', child: Text('Tüm dönemler')),
+                    ...periods.map((p) => DropdownMenuItem(value: p, child: Text(p))),
+                  ],
+                  onChanged: (v) => setState(() => period = v ?? ''),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () => setState(() {
+                      period = '';
+                      status = 'all';
+                    }),
+                    icon: const Icon(Icons.restart_alt_rounded, size: 18),
+                    label: const Text('Filtreleri Temizle'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(18, 18, 18, 8),
+            child: SectionHeading('Aidat Kayıtları', subtitle: 'Satıra dokunarak aidat detayını ve gider dağılımını açabilirsiniz.'),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: ProfessionalDataTable(
+              minWidth: 900,
+              emptyText: 'Seçili filtrelere uygun aidat bulunamadı.',
+              columns: const [
+                DataColumn(label: Text('DÖNEM')),
+                DataColumn(label: Text('DAİRE')),
+                DataColumn(label: Text('AİDAT'), numeric: true),
+                DataColumn(label: Text('ÖDENEN'), numeric: true),
+                DataColumn(label: Text('KALAN'), numeric: true),
+                DataColumn(label: Text('SON ÖDEME')),
+                DataColumn(label: Text('DURUM')),
+              ],
+              rows: filtered.map<DataRow>((row) {
+                final balance = nv(row['balance']);
+                final isPaid = balance <= .009;
+                return DataRow(
+                  onSelectChanged: (_) => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => DueDetailPage(dueId: int.parse('${row['id']}'))),
+                  ),
+                  cells: [
+                    DataCell(TableText('${row['period'] ?? '-'}', strong: true)),
+                    DataCell(TableText('${row['apartment'] ?? '-'}')),
+                    DataCell(TableAmount(tl(row['amount']))),
+                    DataCell(TableAmount(tl(row['paid']), color: success)),
+                    DataCell(TableAmount(tl(balance), color: isPaid ? success : danger)),
+                    DataCell(TableText('${row['due_date'] ?? '-'}')),
+                    DataCell(StatusPill(isPaid ? 'ÖDENDİ' : 'BORÇ VAR', isPaid ? success : danger)),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _ActiveDueCard extends StatelessWidget{final Map<String,dynamic> due;const _ActiveDueCard(this.due);@override Widget build(BuildContext c){final balance=nv(due['balance']);return InkWell(borderRadius:BorderRadius.circular(24),onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>DueDetailPage(dueId:int.parse('${due['id']}')))),child:Ink(decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF101828),Color(0xFF344054)]),borderRadius:BorderRadius.circular(24),boxShadow:const[BoxShadow(color:Color(0x25101828),blurRadius:24,offset:Offset(0,10))]),padding:const EdgeInsets.all(18),child:Row(children:[Container(width:48,height:48,decoration:BoxDecoration(color:brand,borderRadius:BorderRadius.circular(16)),child:const Icon(Icons.receipt_long_rounded,color:ink)),const SizedBox(width:13),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('AKTİF AİDAT · DETAYLARI GÖR',style:TextStyle(fontSize:10,color:brand,fontWeight:FontWeight.w900,letterSpacing:.5)),const SizedBox(height:4),Text('${due['period']??''}',style:const TextStyle(color:Colors.white,fontSize:18,fontWeight:FontWeight.w900)),const SizedBox(height:2),Text('${due['apartment']??''} • Son ödeme ${due['due_date']??'-'}',style:const TextStyle(color:Color(0xFFD0D5DD),fontSize:10.5))])),Column(crossAxisAlignment:CrossAxisAlignment.end,children:[Text(tl(due['amount']),style:const TextStyle(color:Colors.white,fontSize:16,fontWeight:FontWeight.w900)),const SizedBox(height:4),Text(balance>0?'Kalan ${tl(balance)}':'Ödendi',style:TextStyle(color:balance>0?const Color(0xFFFFD166):const Color(0xFF9EF0BE),fontSize:10.5,fontWeight:FontWeight.w800)),const SizedBox(height:4),const Icon(Icons.chevron_right_rounded,color:Colors.white70,size:19)])])));}}
 
@@ -144,7 +531,205 @@ Widget _detailMetric(String l,String v)=>Column(crossAxisAlignment:CrossAxisAlig
 Widget _sumRow(String l,String v,{bool asset=false,bool bold=false})=>Padding(padding:const EdgeInsets.symmetric(vertical:5),child:Row(children:[if(asset)...[const Icon(Icons.build_rounded,size:15,color:blue),const SizedBox(width:6)],Expanded(child:Text(l,style:TextStyle(color:bold?ink:muted,fontWeight:bold?FontWeight.w900:FontWeight.w600))),Text(v,style:TextStyle(fontWeight:FontWeight.w900,color:asset?blue:ink,fontSize:bold?16:14))]));
 Widget _detailChip(String l,String v,{bool strong=false})=>Container(width:150,padding:const EdgeInsets.all(10),decoration:BoxDecoration(color:strong?const Color(0xFFF3FBE3):bg,borderRadius:BorderRadius.circular(12),border:Border.all(color:strong?const Color(0xFFD9EFAD):line)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(l,style:const TextStyle(fontSize:9.5,color:muted,fontWeight:FontWeight.w700)),const SizedBox(height:3),Text(v,style:TextStyle(fontSize:13,fontWeight:FontWeight.w900,color:strong?const Color(0xFF355F00):ink))]));
 
-class PaymentsPage extends StatelessWidget{const PaymentsPage({super.key});@override Widget build(BuildContext c)=>ModernList(path:'payments',title:'Ödemelerim',subtitle:'Gerçekleşen tahsilatlar ve ödeme geçmişiniz',icon:Icons.receipt_long_rounded,builder:(r)=>SoftCard(onTap:()=>details(c,'Ödeme Detayı',r),child:Row(children:[const IconBubble(Icons.verified_rounded,success),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('${r['period']??''}',style:const TextStyle(fontWeight:FontWeight.w900,color:ink)),const SizedBox(height:3),Text('${r['apartment']??''} • ${r['date']??''}',style:const TextStyle(fontSize:11,color:muted))])),Text(tl(r['amount']),style:const TextStyle(fontSize:16,fontWeight:FontWeight.w900,color:success))])));}
+class PaymentsPage extends StatefulWidget {
+  const PaymentsPage({super.key});
+  @override
+  State<PaymentsPage> createState() => _PaymentsPageState();
+}
+
+class _PaymentsPageState extends State<PaymentsPage> with WidgetsBindingObserver {
+  bool busy = true;
+  String? error;
+  List<Map<String, dynamic>> items = [];
+  String period = '';
+  DateTime? from, to;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    load();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) load();
+  }
+
+  Future<void> load() async {
+    if (mounted) setState(() => busy = true);
+    try {
+      final d = await Api.request('payments');
+      items = List<Map<String, dynamic>>.from(
+        (d['items'] as List? ?? []).map((e) => Map<String, dynamic>.from(e)),
+      );
+      error = null;
+    } catch (e) {
+      error = '$e'.replaceFirst('Exception: ', '');
+    }
+    if (mounted) setState(() => busy = false);
+  }
+
+  String ds(DateTime? d) => d == null ? '' : d.toIso8601String().substring(0, 10);
+
+  Future<void> pick(bool isFrom) async {
+    final x = await showDatePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+      initialDate: (isFrom ? from : to) ?? DateTime.now(),
+    );
+    if (x == null) return;
+    setState(() {
+      if (isFrom) {
+        from = x;
+      } else {
+        to = x;
+      }
+    });
+  }
+
+  List<String> get periods {
+    final values = <String>[];
+    for (final row in items) {
+      final p = '${row['period'] ?? ''}'.trim();
+      if (p.isNotEmpty && p != '-' && !values.contains(p)) values.add(p);
+    }
+    return values;
+  }
+
+  List<Map<String, dynamic>> get shown => items.where((r) {
+        final d = DateTime.tryParse('${r['date'] ?? ''}');
+        final matchesPeriod = period.isEmpty || '${r['period'] ?? ''}' == period;
+        final matchesFrom = from == null || d == null || !d.isBefore(from!);
+        final matchesTo = to == null || d == null || !d.isAfter(to!);
+        return matchesPeriod && matchesFrom && matchesTo;
+      }).toList();
+
+  @override
+  Widget build(BuildContext context) {
+    if (busy) return const Center(child: BrandLoader());
+    if (error != null) {
+      return RefreshIndicator(
+        onRefresh: load,
+        child: ListView(
+          children: [
+            const ResidentHeader('Ödemelerim', 'Gerçekleşen tahsilatlar ve ödeme geçmişiniz', Icons.receipt_long_rounded),
+            Padding(padding: const EdgeInsets.all(18), child: SoftCard(child: Text(error!, style: const TextStyle(color: danger)))),
+          ],
+        ),
+      );
+    }
+
+    final filtered = shown;
+    final total = filtered.fold<double>(0, (a, r) => a + nv(r['amount']));
+
+    return RefreshIndicator(
+      onRefresh: load,
+      child: ListView(
+        padding: const EdgeInsets.only(bottom: 110),
+        children: [
+          const ResidentHeader('Ödemelerim', 'Tahsilat geçmişinizi dönem ve tarih aralığıyla inceleyin', Icons.receipt_long_rounded),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: SummaryScroller(children: [
+              CompactStatCard(label: 'Toplam Tahsilat', value: tl(total), icon: Icons.payments_outlined, color: success),
+              CompactStatCard(label: 'İşlem Sayısı', value: '${filtered.length}', icon: Icons.format_list_numbered_rounded, color: violet),
+            ]),
+          ),
+          const SizedBox(height: 14),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: FilterSurface(
+              subtitle: '${filtered.length} / ${items.length} ödeme gösteriliyor',
+              children: [
+                DropdownButtonFormField<String>(
+                  value: period,
+                  decoration: const InputDecoration(labelText: 'Dönem'),
+                  items: [
+                    const DropdownMenuItem(value: '', child: Text('Tüm dönemler')),
+                    ...periods.map((p) => DropdownMenuItem(value: p, child: Text(p))),
+                  ],
+                  onChanged: (v) => setState(() => period = v ?? ''),
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => pick(true),
+                        icon: const Icon(Icons.calendar_today_outlined, size: 18),
+                        label: Text(from == null ? 'Başlangıç' : ds(from)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => pick(false),
+                        icon: const Icon(Icons.event_outlined, size: 18),
+                        label: Text(to == null ? 'Bitiş' : ds(to)),
+                      ),
+                    ),
+                  ],
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () => setState(() {
+                      period = '';
+                      from = null;
+                      to = null;
+                    }),
+                    icon: const Icon(Icons.restart_alt_rounded, size: 18),
+                    label: const Text('Filtreleri Temizle'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(18, 18, 18, 8),
+            child: SectionHeading('Tahsilat Kayıtları', subtitle: 'Geçmiş ödemelerinizi dönem, tarih ve ödeme yöntemiyle görüntüleyin.'),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: ProfessionalDataTable(
+              minWidth: 820,
+              emptyText: 'Seçili filtrelere uygun ödeme bulunamadı.',
+              columns: const [
+                DataColumn(label: Text('TARİH')),
+                DataColumn(label: Text('DÖNEM')),
+                DataColumn(label: Text('DAİRE')),
+                DataColumn(label: Text('YÖNTEM')),
+                DataColumn(label: Text('REFERANS')),
+                DataColumn(label: Text('TUTAR'), numeric: true),
+              ],
+              rows: filtered.map<DataRow>((row) {
+                return DataRow(
+                  onSelectChanged: (_) => details(context, 'Ödeme Detayı', row),
+                  cells: [
+                    DataCell(TableText('${row['date'] ?? '-'}', strong: true)),
+                    DataCell(TableText('${row['period'] ?? '-'}')),
+                    DataCell(TableText('${row['apartment'] ?? '-'}')),
+                    DataCell(TableText(detailStatus(row['method']))),
+                    DataCell(TableText('${row['reference'] ?? '-'}')),
+                    DataCell(TableAmount(tl(row['amount']), color: success)),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class AnnouncementsPage extends StatefulWidget{
  final VoidCallback? onRead;
  const AnnouncementsPage({super.key,this.onRead});

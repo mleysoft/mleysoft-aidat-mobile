@@ -20,10 +20,17 @@ set_plist() {
 # Exact ASCII-space display name. CFBundleName remains Runner.
 set_plist "$SRC_INFO" "CFBundleDisplayName" "$VISIBLE_NAME"
 set_plist "$SRC_INFO" "CFBundleName" "Runner"
+set_plist "$SRC_INFO" "NSPhotoLibraryUsageDescription" "Aidat ve site yönetimi işlemlerinde gerekli görselleri seçebilmeniz için fotoğraf arşivinize erişim gereklidir."
 
 if [ -f "$BUILT_INFO" ]; then
   set_plist "$BUILT_INFO" "CFBundleDisplayName" "$VISIBLE_NAME"
   set_plist "$BUILT_INFO" "CFBundleName" "Runner"
+  set_plist "$BUILT_INFO" "NSPhotoLibraryUsageDescription" "Aidat ve site yönetimi işlemlerinde gerekli görselleri seçebilmeniz için fotoğraf arşivinize erişim gereklidir."
+fi
+
+
+if [ -f "${APP_DIR}/Info.plist" ]; then
+  set_plist "${APP_DIR}/Info.plist" "NSPhotoLibraryUsageDescription" "Aidat ve site yönetimi işlemlerinde gerekli görselleri seçebilmeniz için fotoğraf arşivinize erişim gereklidir."
 fi
 
 if [ ! -f "$GOOGLE_INFO" ]; then

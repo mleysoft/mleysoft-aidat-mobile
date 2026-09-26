@@ -17,6 +17,7 @@ if fb.get('BUNDLE_ID')!='com.mleysoft.aidat': raise SystemExit('ERROR: Firebase 
 info_path=runner/'Info.plist'
 with info_path.open('rb') as f: info=plistlib.load(f)
 info['CFBundleDisplayName']='MS Aidat'; info['CFBundleName']='Runner'
+info['NSPhotoLibraryUsageDescription']='Aidat ve site yönetimi işlemlerinde gerekli görselleri seçebilmeniz için fotoğraf arşivinize erişim gereklidir.'
 modes=list(info.get('UIBackgroundModes',[]))
 for mode in ['fetch','remote-notification']:
     if mode not in modes: modes.append(mode)

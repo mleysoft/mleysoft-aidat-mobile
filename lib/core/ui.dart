@@ -1,5 +1,32 @@
 import 'package:flutter/material.dart';
 
+
+String formatMoneyTr(dynamic value) {
+  double n;
+  if (value is num) {
+    n = value.toDouble();
+  } else {
+    var raw = '${value ?? 0}'.trim().replaceAll('₺', '').replaceAll('TL', '').replaceAll(' ', '');
+    // API values are normally dot-decimal. Also tolerate already formatted Turkish values.
+    if (raw.contains(',') && raw.contains('.')) {
+      if (raw.lastIndexOf(',') > raw.lastIndexOf('.')) raw = raw.replaceAll('.', '').replaceAll(',', '.');
+      else raw = raw.replaceAll(',', '');
+    } else if (raw.contains(',')) {
+      raw = raw.replaceAll('.', '').replaceAll(',', '.');
+    }
+    n = double.tryParse(raw) ?? 0;
+  }
+  final negative = n < 0;
+  final fixed = n.abs().toStringAsFixed(2).split('.');
+  final digits = fixed[0];
+  final grouped = StringBuffer();
+  for (var i = 0; i < digits.length; i++) {
+    if (i > 0 && (digits.length - i) % 3 == 0) grouped.write('.');
+    grouped.write(digits[i]);
+  }
+  return '${negative ? '-' : ''}${grouped.toString()},${fixed[1]} ₺';
+}
+
 const ink=Color(0xFF101828), muted=Color(0xFF667085), bg=Color(0xFFF5F7FB), line=Color(0xFFEAECF0), brand=Color(0xFFB9F227), brandDark=Color(0xFF7FAE00), blue=Color(0xFF4F6EF7), violet=Color(0xFF7C5CFC), danger=Color(0xFFEF476F), success=Color(0xFF16B364), orange=Color(0xFFF79009);
 
 class PageTitle extends StatelessWidget {
@@ -151,7 +178,7 @@ const _detailLabels=<String,String>{
 };
 const _hiddenDetailKeys=<String>{'id','user_id','site_id','apartment_id','block_id','due_id','payment_id','finance_account_id','receipt_url','url','token','device_token','reference_id','created_by','updated_by','is_active'};
 String detailStatus(dynamic v){switch('${v??''}'.toLowerCase()){case 'new':return 'Yeni';case 'in_progress':return 'İşlemde';case 'resolved':return 'Çözüldü';case 'closed':return 'Kapatıldı';case 'approved':return 'Onaylandı';case 'pending':return 'Bekliyor';case 'rejected':return 'Reddedildi';case 'paid':return 'Ödendi';case 'unpaid':return 'Ödenmedi';case 'cash':return 'Nakit';case 'bank':return 'Banka';case 'transfer':return 'Havale / EFT';default:return '${v??'-'}';}}
-String detailValue(String key,dynamic value){if(key=='status'||key=='method')return detailStatus(value);if(['amount','balance','price'].contains(key)){final n=double.tryParse('$value');if(n!=null)return '${n.toStringAsFixed(2).replaceAll('.',',')} ₺';}return '$value';}
+String detailValue(String key,dynamic value){if(key=='status'||key=='method')return detailStatus(value);if(['amount','balance','price','total','paid','debt','income','expense','remaining_amount','total_amount'].contains(key)){return formatMoneyTr(value);}return '$value';}
 Future<void>showRecordDetails(BuildContext context,String title,Map<String,dynamic> data,{List<String>? fields})async{
   final keys=(fields??data.keys.where((k)=>_detailLabels.containsKey(k)&&!_hiddenDetailKeys.contains(k)).toList()).where((k)=>data[k]!=null&&'${data[k]}'.trim().isNotEmpty).toList();
   await showModalBottomSheet(context:context,isScrollControlled:true,backgroundColor:Colors.transparent,builder:(x)=>Container(constraints:BoxConstraints(maxHeight:MediaQuery.of(x).size.height*.82),decoration:const BoxDecoration(color:Colors.white,borderRadius:BorderRadius.vertical(top:Radius.circular(30))),child:SafeArea(top:false,child:Column(mainAxisSize:MainAxisSize.min,children:[Container(margin:const EdgeInsets.only(top:10),width:42,height:4,decoration:BoxDecoration(color:const Color(0xFFD0D5DD),borderRadius:BorderRadius.circular(99))),Padding(padding:const EdgeInsets.fromLTRB(20,18,12,12),child:Row(children:[Expanded(child:Text(title,style:const TextStyle(fontSize:23,fontWeight:FontWeight.w900,color:ink,letterSpacing:-.4))),IconButton(onPressed:()=>Navigator.pop(x),icon:const Icon(Icons.close_rounded))])),const Divider(height:1),Flexible(child:SingleChildScrollView(padding:const EdgeInsets.fromLTRB(20,18,20,28),child:Column(children:keys.map((k)=>Container(margin:const EdgeInsets.only(bottom:10),padding:const EdgeInsets.symmetric(horizontal:14,vertical:13),decoration:BoxDecoration(color:bg,borderRadius:BorderRadius.circular(16)),child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[Expanded(flex:4,child:Text(_detailLabels[k]??k,style:const TextStyle(fontSize:12,color:muted,fontWeight:FontWeight.w700))),const SizedBox(width:12),Expanded(flex:6,child:Text(detailValue(k,data[k]),textAlign:TextAlign.right,style:const TextStyle(fontSize:13,color:ink,fontWeight:FontWeight.w800,height:1.35)))]))).toList())))]))));

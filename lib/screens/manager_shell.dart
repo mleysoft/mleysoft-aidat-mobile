@@ -11,7 +11,7 @@ import '../core/ui.dart';
 import '../core/push.dart';
 import 'login.dart';
 
-String money(dynamic v)=>'${(double.tryParse('$v')??0).toStringAsFixed(2)} ₺';
+String money(dynamic v)=>formatMoneyTr(v);
 Future<bool> requireManagerPackage(BuildContext context) async {
   if(Api.managerPackageActive!=false)return true;
   await showDialog<void>(context:context,builder:(c)=>AlertDialog(

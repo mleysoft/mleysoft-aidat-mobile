@@ -9,7 +9,7 @@ import '../core/push.dart';
 import 'login.dart';
 
 double nv(dynamic v)=>v is num?v.toDouble():double.tryParse('$v')??0;
-String tl(dynamic v)=>'${nv(v).toStringAsFixed(2).replaceAll('.', ',')} ₺';
+String tl(dynamic v)=>formatMoneyTr(v);
 final ValueNotifier<int> residentUnreadAnnouncements=ValueNotifier<int>(0);
 
 class AppShell extends StatefulWidget{const AppShell({super.key});@override State<AppShell> createState()=>_AppShellState();}

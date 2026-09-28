@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 import '../core/api.dart';
 import '../core/loading.dart';
 import '../core/ui.dart';
@@ -517,7 +517,7 @@ class _DuesPageState extends State<DuesPage> with WidgetsBindingObserver {
 class _ActiveDueCard extends StatelessWidget{final Map<String,dynamic> due;const _ActiveDueCard(this.due);@override Widget build(BuildContext c){final balance=nv(due['balance']);return InkWell(borderRadius:BorderRadius.circular(24),onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>DueDetailPage(dueId:int.parse('${due['id']}')))),child:Ink(decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF101828),Color(0xFF344054)]),borderRadius:BorderRadius.circular(24),boxShadow:const[BoxShadow(color:Color(0x25101828),blurRadius:24,offset:Offset(0,10))]),padding:const EdgeInsets.all(18),child:Row(children:[Container(width:48,height:48,decoration:BoxDecoration(color:brand,borderRadius:BorderRadius.circular(16)),child:const Icon(Icons.receipt_long_rounded,color:ink)),const SizedBox(width:13),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('AKTİF AİDAT · DETAYLARI GÖR',style:TextStyle(fontSize:10,color:brand,fontWeight:FontWeight.w900,letterSpacing:.5)),const SizedBox(height:4),Text('${due['period']??''}',style:const TextStyle(color:Colors.white,fontSize:18,fontWeight:FontWeight.w900)),const SizedBox(height:2),Text('${due['apartment']??''} • Son ödeme ${due['due_date']??'-'}',style:const TextStyle(color:Color(0xFFD0D5DD),fontSize:10.5))])),Column(crossAxisAlignment:CrossAxisAlignment.end,children:[Text(tl(due['amount']),style:const TextStyle(color:Colors.white,fontSize:16,fontWeight:FontWeight.w900)),const SizedBox(height:4),Text(balance>0?'Kalan ${tl(balance)}':'Ödendi',style:TextStyle(color:balance>0?const Color(0xFFFFD166):const Color(0xFF9EF0BE),fontSize:10.5,fontWeight:FontWeight.w800)),const SizedBox(height:4),const Icon(Icons.chevron_right_rounded,color:Colors.white70,size:19)])])));}}
 
 class DueDetailPage extends StatefulWidget{final int dueId;const DueDetailPage({super.key,required this.dueId});@override State<DueDetailPage> createState()=>_DueDetailPageState();}
-class _DueDetailPageState extends State<DueDetailPage> with WidgetsBindingObserver{Map<String,dynamic>? data;String? error;bool paying=false,_waitingPayment=false;double? _balanceBeforePayment;@override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);load();}@override void dispose(){WidgetsBinding.instance.removeObserver(this);super.dispose();}@override void didChangeAppLifecycleState(AppLifecycleState state){if(state==AppLifecycleState.resumed)_refreshAfterPayment();}Future<void>load()async{try{final detail=await Api.request('due-detail?id=${widget.dueId}');Map<String,dynamic> info=Map<String,dynamic>.from(detail['manager_payment_info']??{});if(('${info['iban']??''}'.trim().isEmpty)||('${info['manager_name']??''}'.trim().isEmpty)){try{final dash=await Api.request('dashboard');final fallback=Map<String,dynamic>.from(dash['manager_payment_info']??{});if('${info['manager_name']??''}'.trim().isEmpty)info['manager_name']=fallback['manager_name']??'';if('${info['iban']??''}'.trim().isEmpty)info['iban']=fallback['iban']??'';if('${info['bank_account_name']??''}'.trim().isEmpty)info['bank_account_name']=fallback['bank_account_name']??'';}catch(_){}}detail['manager_payment_info']=info;data=detail;error=null;}catch(e){error='$e'.replaceFirst('Exception: ','');}if(mounted)setState((){});}Future<void>_refreshAfterPayment()async{final wasWaiting=_waitingPayment,before=_balanceBeforePayment;await load();if(!mounted||!wasWaiting||data==null)return;final now=nv(data!['due']?['balance']);_waitingPayment=false;_balanceBeforePayment=null;if(before!=null&&before>0.009&&now<=0.009){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Ödemeniz başarıyla alındı ve aidatınıza işlendi.')));}else{ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Ödeme durumu güncellendi. Ödeme tamamlanmadıysa tekrar deneyebilirsiniz.')));}}Future<void>payCard()async{if(paying)return;final due=Map<String,dynamic>.from(data?['due']??{});final balance=nv(due['balance']);final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Kredi Kartı ile Öde'),content:Text('${tl(balance)} tutarındaki site/apartman aidat borcunuz Tahsilat.com güvenli ödeme ekranında site yönetimi adına tahsil edilecek. Bu ödeme dijital içerik, uygulama özelliği veya MleySoft aboneliği satın almaz. Kart bilgileriniz MleySoft tarafından saklanmaz.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Ödemeye Geç'))]))??false;if(!ok||!mounted)return;setState(()=>paying=true);try{final r=await Api.request('card-payment',method:'POST',body:{'due_id':widget.dueId});final u=Uri.parse('${r['checkout_url']}');_waitingPayment=true;_balanceBeforePayment=balance;var opened=await launchUrl(u,mode:LaunchMode.inAppBrowserView);if(!opened)opened=await launchUrl(u,mode:LaunchMode.externalApplication);if(!opened){_waitingPayment=false;_balanceBeforePayment=null;throw Exception('Güvenli ödeme sayfası açılamadı.');}if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Güvenli ödeme ekranı açıldı. İşlem bitince aidat durumu otomatik yenilenecek.')));}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$e'.replaceFirst('Exception: ',''))));}finally{paying=false;if(mounted)setState((){});}}
+class _DueDetailPageState extends State<DueDetailPage> with WidgetsBindingObserver{Map<String,dynamic>? data;String? error;bool paying=false,_waitingPayment=false;double? _balanceBeforePayment;@override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);load();}@override void dispose(){WidgetsBinding.instance.removeObserver(this);super.dispose();}@override void didChangeAppLifecycleState(AppLifecycleState state){if(state==AppLifecycleState.resumed)_refreshAfterPayment();}Future<void>load()async{try{final detail=await Api.request('due-detail?id=${widget.dueId}');Map<String,dynamic> info=Map<String,dynamic>.from(detail['manager_payment_info']??{});if(('${info['iban']??''}'.trim().isEmpty)||('${info['manager_name']??''}'.trim().isEmpty)){try{final dash=await Api.request('dashboard');final fallback=Map<String,dynamic>.from(dash['manager_payment_info']??{});if('${info['manager_name']??''}'.trim().isEmpty)info['manager_name']=fallback['manager_name']??'';if('${info['iban']??''}'.trim().isEmpty)info['iban']=fallback['iban']??'';if('${info['bank_account_name']??''}'.trim().isEmpty)info['bank_account_name']=fallback['bank_account_name']??'';}catch(_){}}detail['manager_payment_info']=info;data=detail;error=null;}catch(e){error='$e'.replaceFirst('Exception: ','');}if(mounted)setState((){});}Future<void>_refreshAfterPayment()async{final wasWaiting=_waitingPayment,before=_balanceBeforePayment;await load();if(!mounted||!wasWaiting||data==null)return;final now=nv(data!['due']?['balance']);_waitingPayment=false;_balanceBeforePayment=null;if(before!=null&&before>0.009&&now<=0.009){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Ödemeniz başarıyla alındı ve aidatınıza işlendi.')));}else{ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Ödeme durumu güncellendi. Ödeme tamamlanmadıysa tekrar deneyebilirsiniz.')));}}Future<void>payCard()async{if(paying)return;final due=Map<String,dynamic>.from(data?['due']??{});final balance=nv(due['balance']);final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Kredi Kartı ile Öde'),content:Text('${tl(balance)} tutarındaki site/apartman aidat borcunuz Tahsilat.com güvenli ödeme ekranında site yönetimi adına tahsil edilecek. Bu ödeme dijital içerik, uygulama özelliği veya MleySoft aboneliği satın almaz. Kart bilgileriniz MleySoft tarafından saklanmaz.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Vazgeç')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Ödemeye Geç'))]))??false;if(!ok||!mounted)return;setState(()=>paying=true);try{final r=await Api.request('card-payment',method:'POST',body:{'due_id':widget.dueId});final u=Uri.parse('${r['checkout_url']}');_waitingPayment=true;_balanceBeforePayment=balance;final token='${r['token']??''}';final result=await Navigator.push<String>(context,MaterialPageRoute(builder:(_)=>CardPaymentWebViewPage(checkoutUrl:u,token:token,dueId:widget.dueId)));if(!mounted)return;await _refreshAfterPayment();if(result=='success'){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Ödemeniz başarıyla tamamlandı.')));}else if(result=='failed'){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Ödeme onaylanmadı. Kartınızdan tahsilat yapılmadıysa tekrar deneyebilirsiniz.')));}}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$e'.replaceFirst('Exception: ',''))));}finally{paying=false;if(mounted)setState((){});}}
 @override Widget build(BuildContext c){if(data==null&&error==null)return const Scaffold(body:Center(child:BrandLoader()));if(error!=null)return Scaffold(appBar:AppBar(title:const Text('Aidat Detayı')),backgroundColor:bg,body:Center(child:Padding(padding:const EdgeInsets.all(24),child:SoftCard(child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.error_outline_rounded,size:42,color:danger),const SizedBox(height:10),Text(error!,textAlign:TextAlign.center),const SizedBox(height:12),FilledButton.icon(onPressed:load,icon:const Icon(Icons.refresh),label:const Text('Tekrar Dene'))])))));final d=Map<String,dynamic>.from(data!['due']??{}),sum=Map<String,dynamic>.from(data!['summary']??{}),items=(data!['items'] as List?)??[];final status='${d['status']??'unpaid'}';final card=Map<String,dynamic>.from(data!['card_payment']??{});final cardEnabled=card['enabled']==true||card['enabled']==1||'${card['enabled']}'.toLowerCase()=='true';final canPay=nv(d['balance'])>0.009||status=='unpaid'||status=='partial'||card['available_for_due']==true||card['available_for_due']==1;final paymentInfo=Map<String,dynamic>.from(data!['manager_payment_info']??{});return Scaffold(backgroundColor:bg,appBar:AppBar(title:const Text('Aidat Detayı')),body:RefreshIndicator(onRefresh:load,child:ListView(padding:const EdgeInsets.fromLTRB(16,10,16,30),children:[
  Container(padding:const EdgeInsets.all(20),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF101828),Color(0xFF26354D)]),borderRadius:BorderRadius.circular(26),boxShadow:const[BoxShadow(color:Color(0x25101828),blurRadius:24,offset:Offset(0,10))]),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[Container(width:48,height:48,decoration:BoxDecoration(color:brand,borderRadius:BorderRadius.circular(16)),child:const Icon(Icons.receipt_long_rounded,color:ink)),const Spacer(),StatusPill(status=='paid'?'ÖDENDİ':status=='partial'?'KISMİ ÖDENDİ':'ÖDEME BEKLİYOR',status=='paid'?success:status=='partial'?orange:danger)]),const SizedBox(height:18),const Text('DÖNEM AİDATI',style:TextStyle(fontSize:10,color:brand,fontWeight:FontWeight.w900,letterSpacing:.8)),const SizedBox(height:3),Text('${d['period_label']??''}',style:const TextStyle(fontSize:26,color:Colors.white,fontWeight:FontWeight.w900)),Text('${d['site_name']??''} • ${d['apartment']??''}',style:const TextStyle(fontSize:11,color:Color(0xFFD0D5DD))),const SizedBox(height:18),Row(children:[Expanded(child:_detailMetric('Toplam Aidat',tl(d['total_amount']))),Expanded(child:_detailMetric('Kalan',tl(d['balance'])))]),const SizedBox(height:12),Row(children:[Expanded(child:_detailMetric('Ödenen',tl(d['paid']))),Expanded(child:_detailMetric('Demirbaş Payı',tl(sum['asset_share'])))])])),
  if(canPay)...[const SizedBox(height:14),SoftCard(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[const Row(children:[IconBubble(Icons.payments_rounded,success),SizedBox(width:11),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Aidat Ödeme',style:TextStyle(fontWeight:FontWeight.w900,fontSize:17,color:ink)),Text('Site/apartman ortak gider aidat borcunuzu güvenli şekilde ödeyin',style:TextStyle(fontSize:10.5,color:muted))]))]),const SizedBox(height:14),SizedBox(height:54,child:FilledButton.icon(onPressed:paying?null:payCard,icon:paying?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.credit_card_rounded),label:Text(paying?'Ödeme hazırlanıyor...':'Kredi Kartı ile Öde',style:const TextStyle(fontWeight:FontWeight.w900,fontSize:15)))),const SizedBox(height:10),Container(padding:const EdgeInsets.all(10),decoration:BoxDecoration(color:bg,borderRadius:BorderRadius.circular(12),border:Border.all(color:line)),child:const Text('Bu tahsilat site/apartman ortak gider aidat borcunuz içindir; dijital içerik, uygulama özelliği veya MleySoft aboneliği satın almaz.',style:TextStyle(fontSize:10.5,color:muted,height:1.35))),const SizedBox(height:7),Center(child:Text(cardEnabled?'3D Secure · Tahsilat.com güvenli ödeme altyapısı':'Ödeme uygunluğu işlem başlatılırken sunucudan doğrulanır.',style:const TextStyle(fontSize:10.5,color:muted,fontWeight:FontWeight.w600)))]))],const SizedBox(height:14),_ManagerPaymentCard(paymentInfo),
@@ -530,6 +530,93 @@ class _DueDetailPageState extends State<DueDetailPage> with WidgetsBindingObserv
 Widget _detailMetric(String l,String v)=>Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(l,style:const TextStyle(fontSize:9.5,color:Color(0xFFAEB8C7),fontWeight:FontWeight.w700)),const SizedBox(height:3),Text(v,style:const TextStyle(fontSize:16,color:Colors.white,fontWeight:FontWeight.w900))]);
 Widget _sumRow(String l,String v,{bool asset=false,bool bold=false})=>Padding(padding:const EdgeInsets.symmetric(vertical:5),child:Row(children:[if(asset)...[const Icon(Icons.build_rounded,size:15,color:blue),const SizedBox(width:6)],Expanded(child:Text(l,style:TextStyle(color:bold?ink:muted,fontWeight:bold?FontWeight.w900:FontWeight.w600))),Text(v,style:TextStyle(fontWeight:FontWeight.w900,color:asset?blue:ink,fontSize:bold?16:14))]));
 Widget _detailChip(String l,String v,{bool strong=false})=>Container(width:150,padding:const EdgeInsets.all(10),decoration:BoxDecoration(color:strong?const Color(0xFFF3FBE3):bg,borderRadius:BorderRadius.circular(12),border:Border.all(color:strong?const Color(0xFFD9EFAD):line)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(l,style:const TextStyle(fontSize:9.5,color:muted,fontWeight:FontWeight.w700)),const SizedBox(height:3),Text(v,style:TextStyle(fontSize:13,fontWeight:FontWeight.w900,color:strong?const Color(0xFF355F00):ink))]));
+
+
+class CardPaymentWebViewPage extends StatefulWidget {
+  final Uri checkoutUrl;
+  final String token;
+  final int dueId;
+  const CardPaymentWebViewPage({super.key,required this.checkoutUrl,required this.token,required this.dueId});
+  @override State<CardPaymentWebViewPage> createState()=>_CardPaymentWebViewPageState();
+}
+
+class _CardPaymentWebViewPageState extends State<CardPaymentWebViewPage> {
+  late final WebViewController _controller;
+  Timer? _poll;
+  int _progress=0;
+  bool _finishing=false;
+  String _statusText='Güvenli ödeme ekranı hazırlanıyor...';
+
+  @override void initState(){
+    super.initState();
+    _controller=WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(Colors.white)
+      ..setNavigationDelegate(NavigationDelegate(
+        onProgress:(v){if(mounted)setState(()=>_progress=v);},
+        onPageFinished:(_){if(mounted)setState(()=>_statusText='3D Secure · Güvenli ödeme');},
+        onWebResourceError:(e){if(e.isForMainFrame==true&&mounted)setState(()=>_statusText='Ödeme sayfası bağlantısı kontrol ediliyor...');},
+        onNavigationRequest:(request){
+          final uri=Uri.tryParse(request.url);
+          if(uri!=null&&uri.scheme.toLowerCase()=='mleysoftaidat'&&uri.host=='payment-result'){
+            final status=uri.queryParameters['status']??'pending';
+            _finish(status);
+            return NavigationDecision.prevent;
+          }
+          return NavigationDecision.navigate;
+        },
+      ))
+      ..loadRequest(widget.checkoutUrl);
+    _poll=Timer.periodic(const Duration(seconds:2),(_)=>_checkStatus());
+  }
+
+  Future<void> _checkStatus() async {
+    if(_finishing||widget.token.isEmpty)return;
+    try{
+      final r=await Api.request('card-payment-status?token=${Uri.encodeQueryComponent(widget.token)}');
+      final status='${r['status']??''}'.toLowerCase();
+      if(status=='paid')await _finish('success');
+      else if(status=='failed'||status=='cancelled'||status=='expired')await _finish('failed');
+    }catch(_){}
+  }
+
+  Future<void> _finish(String status) async {
+    if(_finishing)return;
+    _finishing=true;
+    _poll?.cancel();
+    if(!mounted)return;
+    Navigator.pop(context,status);
+  }
+
+  Future<bool> _confirmClose() async {
+    if(_finishing)return true;
+    final close=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(
+      title:const Text('Ödeme ekranından çıkılsın mı?'),
+      content:const Text('Ödeme işleminiz devam ediyorsa ekranı kapatmayın. Tamamlanan ödeme sunucuda ayrıca doğrulanır.'),
+      actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Ödemeye Dön')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Ekranı Kapat'))],
+    ))??false;
+    return close;
+  }
+
+  @override void dispose(){_poll?.cancel();super.dispose();}
+
+  @override Widget build(BuildContext context)=>PopScope(
+    canPop:false,
+    onPopInvokedWithResult:(didPop,result)async{if(!didPop&&await _confirmClose()&&mounted)Navigator.pop(context,'cancelled');},
+    child:Scaffold(
+      backgroundColor:Colors.white,
+      appBar:AppBar(
+        title:const Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Güvenli Ödeme',style:TextStyle(fontSize:17,fontWeight:FontWeight.w900)),Text('MleySoft Aidat',style:TextStyle(fontSize:10,color:muted,fontWeight:FontWeight.w600))]),
+        actions:[IconButton(tooltip:'Kapat',icon:const Icon(Icons.close_rounded),onPressed:()async{if(await _confirmClose()&&mounted)Navigator.pop(context,'cancelled');})],
+      ),
+      body:Column(children:[
+        if(_progress<100)LinearProgressIndicator(value:_progress/100,minHeight:2),
+        Container(width:double.infinity,padding:const EdgeInsets.symmetric(horizontal:16,vertical:8),color:const Color(0xFFF8FAFC),child:Row(children:[const Icon(Icons.lock_rounded,size:15,color:success),const SizedBox(width:7),Expanded(child:Text(_statusText,style:const TextStyle(fontSize:11,color:muted,fontWeight:FontWeight.w700)))])),
+        Expanded(child:WebViewWidget(controller:_controller)),
+      ]),
+    ),
+  );
+}
 
 class PaymentsPage extends StatefulWidget {
   const PaymentsPage({super.key});

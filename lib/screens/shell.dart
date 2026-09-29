@@ -337,6 +337,7 @@ class _DuesPageState extends State<DuesPage> with WidgetsBindingObserver {
   String? error;
   List<Map<String, dynamic>> items = [];
   Map<String,dynamic> paymentInfo = {};
+  Map<String,dynamic> summary = {};
   String totalPaymentReference = '';
   bool cardPaymentEnabled = false;
   String period = '';
@@ -368,6 +369,7 @@ class _DuesPageState extends State<DuesPage> with WidgetsBindingObserver {
         (d['items'] as List? ?? []).map((e) => Map<String, dynamic>.from(e)),
       );
       paymentInfo=Map<String,dynamic>.from(d['manager_payment_info']??{});
+      summary=Map<String,dynamic>.from(d['summary']??{});
       totalPaymentReference='${d['total_payment_reference']??''}';
       cardPaymentEnabled=(d['card_payment']?['enabled']==true);
       error = null;
@@ -427,6 +429,7 @@ class _DuesPageState extends State<DuesPage> with WidgetsBindingObserver {
               CompactStatCard(label: 'Kalan Borç', value: tl(debt), icon: Icons.warning_amber_rounded, color: debt > .009 ? danger : success),
               CompactStatCard(label: 'Toplam Aidat', value: tl(total), icon: Icons.receipt_long_outlined, color: blue),
               CompactStatCard(label: 'Ödenen', value: tl(paid), icon: Icons.check_circle_outline_rounded, color: success),
+              CompactStatCard(label: 'Artı Bakiye', value: tl(nv(summary['credit'])), icon: Icons.add_circle_outline_rounded, color: success),
             ]),
           ),
           const SizedBox(height: 14),

@@ -7,7 +7,7 @@ if [ -d "mobile_app" ] && [ -f "mobile_app/pubspec.yaml" ]; then
 fi
 
 echo "========================================"
-echo " MLEYSOFT AIDAT FINAL IPA CHECK V174"
+echo " MLEYSOFT AIDAT FINAL IPA CHECK V176"
 echo "========================================"
 
 IPA="$(find build/ios/ipa -maxdepth 1 -name '*.ipa' -print -quit 2>/dev/null || true)"
@@ -79,6 +79,20 @@ if [ "$SHARE_BUNDLE" != "com.mleysoft.aidat.share" ]; then
 fi
 echo "FINAL Share Extension OK: $SHARE_BUNDLE"
 
+# Validate the extension executable using the already-resolved $SHARE path.
+# Keep this before the final success banner so a real extension packaging error
+# cannot be reported as success.
+SHARE_EXECUTABLE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$SHARE/Info.plist" 2>/dev/null || true)
+if [ -z "$SHARE_EXECUTABLE" ]; then
+  echo "ERROR: AidatShare CFBundleExecutable missing"
+  exit 1
+fi
+if [ ! -f "$SHARE/$SHARE_EXECUTABLE" ]; then
+  echo "ERROR: AidatShare executable not found: $SHARE_EXECUTABLE"
+  exit 1
+fi
+echo "FINAL Share executable OK: $SHARE_EXECUTABLE"
+
 if [ ! -f "$APP/GoogleService-Info.plist" ]; then
   echo "ERROR: FINAL IPA Firebase plist yok"
   exit 1
@@ -117,22 +131,10 @@ fi
 
 echo ""
 echo "########################################"
-echo "FINAL IPA SUCCESS V174"
+echo "FINAL IPA SUCCESS V176"
 echo " - Name = MS Aidat"
 echo " - CFBundleName = Runner"
 echo " - Bundle = com.mleysoft.aidat"
 echo " - Firebase plist = com.mleysoft.aidat"
 echo " - APNs = production"
 echo "########################################"
-
-EXT_PLIST="$TMP_DIR/Payload/Runner.app/PlugIns/AidatShare.appex/Info.plist"
-EXT_EXECUTABLE=$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$EXT_PLIST" 2>/dev/null || true)
-if [ -z "$EXT_EXECUTABLE" ]; then
-  echo "ERROR: AidatShare CFBundleExecutable missing"
-  exit 1
-fi
-if [ ! -f "$TMP_DIR/Payload/Runner.app/PlugIns/AidatShare.appex/$EXT_EXECUTABLE" ]; then
-  echo "ERROR: AidatShare executable not found: $EXT_EXECUTABLE"
-  exit 1
-fi
-echo "SHARE EXECUTABLE OK: $EXT_EXECUTABLE"

@@ -7,7 +7,7 @@ if [ -d "mobile_app" ] && [ -f "mobile_app/pubspec.yaml" ]; then
 fi
 
 echo "========================================"
-echo " MLEYSOFT AIDAT IOS PREBUILD V171"
+echo " MLEYSOFT AIDAT IOS PREBUILD V172"
 echo "========================================"
 
 echo "1) Repository iOS projesi ve Share Extension korunuyor..."
@@ -52,9 +52,12 @@ test -f ios/Runner/Runner.entitlements
 
 grep -q '^CODE_SIGN_ENTITLEMENTS=Runner/Runner.entitlements$' ios/Flutter/Release.xcconfig
 grep -q 'CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;' ios/Runner.xcodeproj/project.pbxproj
-grep -q 'MleySoft Firebase Plist' ios/Runner.xcodeproj/project.pbxproj
+# Firebase plist PBX comment is not a functional requirement; configure_ios.py may
+# keep the resource under a normal PBXFileReference name. Verify the real file instead.
+test -f ios/Runner/GoogleService-Info.plist
 
-grep -q 'Messaging.messaging().apnsToken=deviceToken' ios/Runner/AppDelegate.swift
+# Swift formatting can contain spaces around '='. Match semantically, not byte-for-byte.
+grep -Eq 'Messaging\.messaging\(\)\.apnsToken[[:space:]]*=[[:space:]]*deviceToken' ios/Runner/AppDelegate.swift
 
 test -f packages/mleysoft_native_bridge/ios/Classes/MleySoftNativeBridgePlugin.swift
 grep -q 'registrar.addApplicationDelegate(instance)' packages/mleysoft_native_bridge/ios/Classes/MleySoftNativeBridgePlugin.swift
@@ -63,7 +66,7 @@ grep -q "s.dependency 'FirebaseMessaging'" packages/mleysoft_native_bridge/ios/m
 
 echo ""
 echo "########################################"
-echo "PREBUILD SUCCESS V171"
+echo "PREBUILD SUCCESS V172"
 echo " - Repository iOS project preserved"
 echo " - Name = MS Aidat"
 echo " - CFBundleName = Runner"

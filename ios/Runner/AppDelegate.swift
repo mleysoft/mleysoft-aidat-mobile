@@ -33,6 +33,7 @@ import FirebaseMessaging
 
   override func applicationDidBecomeActive(_ application: UIApplication) {
     super.applicationDidBecomeActive(application)
+    _ = consumeSharedBankStatement()
     UNUserNotificationCenter.current().getNotificationSettings { settings in
       if settings.authorizationStatus == .authorized ||
          settings.authorizationStatus == .provisional ||
@@ -75,6 +76,15 @@ import FirebaseMessaging
     super.application(application, didFailToRegisterForRemoteNotificationsWithError: error)
   }
 
+  private func consumeSharedBankStatement() -> Bool {
+    let group = UserDefaults(suiteName: "group.com.mleysoft.aidat")
+    guard let path = group?.string(forKey: "pending_bank_statement"), !path.isEmpty, FileManager.default.fileExists(atPath: path) else { return false }
+    group?.removeObject(forKey: "pending_bank_statement")
+    pendingSharedFile = path
+    sharedFileChannel?.invokeMethod("sharedFileReceived", arguments: path)
+    return true
+  }
+
   func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
     UserDefaults.standard.set(fcmToken ?? "", forKey: "mleysoft_aidat_fcm_token")
   }
@@ -93,6 +103,10 @@ import FirebaseMessaging
         return true
       } catch { return false }
     }
+    if url.scheme == "mleysoftaidat" && url.host == "bank-import" {
+      _ = consumeSharedBankStatement()
+      return true
+    }
     return super.application(app, open: url, options: options)
   }
 
@@ -105,6 +119,7 @@ import FirebaseMessaging
     )
     sharedFileChannel?.setMethodCallHandler { [weak self] call, result in
       guard call.method == "getPendingSharedFile" else { result(FlutterMethodNotImplemented); return }
+      _ = self?.consumeSharedBankStatement()
       let path = self?.pendingSharedFile
       self?.pendingSharedFile = nil
       result(path)

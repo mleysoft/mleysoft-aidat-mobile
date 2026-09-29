@@ -1120,7 +1120,7 @@ class _BankStatementImportPageState extends State<BankStatementImportPage>{
     try{
       final f=File(path!);if(!await f.exists())throw Exception('Paylaşılan dosyaya erişilemedi. Dosyayı yeniden seçin.');
       final bytes=await f.readAsBytes();if(bytes.length>8*1024*1024)throw Exception('Dosya en fazla 8 MB olabilir.');
-      final r=await Api.request('manager',method:'POST',body:{'action':'bank_import_upload','finance_account_id':accountId,'filename':fileName??'statement.xlsx','data_base64':base64Encode(bytes)});
+      final r=await Api.request('manager',method:'POST',body:{'action':'bank_import_upload','finance_account_id':accountId,'filename':fileName??'statement.xlsx','data_base64':base64Encode(bytes)},timeout:const Duration(seconds:90));
       result=r;await load();if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('${r['message']}')));
     }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$e'.replaceFirst('Exception: ',''))));}
     uploading=false;if(mounted)setState((){});

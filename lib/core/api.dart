@@ -18,15 +18,15 @@ class Api {
   static Future<void> saveRole(String v)=>_store.write(key:'role',value:v);
   static Future<String?> role()=>_store.read(key:'role');
   static Future<void> clear()=>_store.deleteAll();
-  static Future<Map<String,dynamic>> request(String path,{String method='GET',Map<String,dynamic>? body,bool auth=true}) async {
+  static Future<Map<String,dynamic>> request(String path,{String method='GET',Map<String,dynamic>? body,bool auth=true,Duration timeout=const Duration(seconds:20)}) async {
     final h={'Accept':'application/json','Content-Type':'application/json'};
     if(auth){final t=await token();if(t!=null)h['Authorization']='Bearer $t';}
     final parts=path.split('?');
     final base=Uri.parse('${AppConfig.apiBase}/${parts.first}.php');
     final uri=parts.length>1?base.replace(query:parts.sublist(1).join('?')):base;
     http.Response r;
-    if(method=='POST') r=await http.post(uri,headers:h,body:jsonEncode(body??{})).timeout(const Duration(seconds:20));
-    else r=await http.get(uri,headers:h).timeout(const Duration(seconds:20));
+    if(method=='POST') r=await http.post(uri,headers:h,body:jsonEncode(body??{})).timeout(timeout);
+    else r=await http.get(uri,headers:h).timeout(timeout);
     dynamic d;
     try { d=jsonDecode(r.body); } catch (_) { throw ApiException('Sunucu geçersiz yanıt verdi (HTTP ${r.statusCode}).',r.statusCode); }
     if(d is! Map<String,dynamic>) throw ApiException('Sunucudan geçersiz yanıt alındı (HTTP ${r.statusCode}).',r.statusCode);

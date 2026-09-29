@@ -7,20 +7,27 @@ if [ -d "mobile_app" ] && [ -f "mobile_app/pubspec.yaml" ]; then
 fi
 
 echo "========================================"
-echo " MLEYSOFT AIDAT CLEAN IOS PREBUILD V114"
+echo " MLEYSOFT AIDAT IOS PREBUILD V171"
 echo "========================================"
 
-echo "1) Eski iOS klasoru siliniyor..."
-rm -rf ios
+echo "1) Repository iOS projesi ve Share Extension korunuyor..."
+# V170'teki kritik hata: `rm -rf ios` + `flutter create` committed AidatShare target'ini siliyordu.
+# Share Extension native Xcode target oldugu icin iOS klasoru CI sirasinda yeniden uretilmemelidir.
+test -f ios/Runner.xcodeproj/project.pbxproj || { echo "ERROR: Repository iOS projesi bulunamadi"; exit 1; }
+test -d ios/AidatShare || { echo "ERROR: AidatShare Share Extension repository'de bulunamadi"; exit 1; }
+test -f ios/AidatShare/ShareViewController.swift || { echo "ERROR: AidatShare kaynak dosyasi eksik"; exit 1; }
 
-echo "2) Flutter standart iOS platformu yeniden olusturuluyor..."
-flutter create --platforms=ios --org com.mleysoft .
+echo "2) Flutter paketleri aliniyor..."
+flutter pub get
 
-echo "3) Aidat iOS ayarlari uygulanıyor..."
+echo "3) Aidat iOS ayarlari mevcut Xcode projesine uygulanıyor..."
 python3 native_config/configure_ios.py
 
-echo "4) Flutter paketleri aliniyor..."
-flutter pub get
+echo "4) Share Extension yapisi dogrulaniyor..."
+test -f ios/AidatShare/Info.plist
+test -f ios/AidatShare/AidatShare.entitlements
+grep -q 'com.mleysoft.aidat.share' ios/Runner.xcodeproj/project.pbxproj
+grep -q 'AidatShare.appex' ios/Runner.xcodeproj/project.pbxproj
 
 # IMPORTANT:
 # Workflow Editor Pre-build, Codemagic'in `xcode-project use-profiles`
@@ -56,12 +63,13 @@ grep -q "s.dependency 'FirebaseMessaging'" packages/mleysoft_native_bridge/ios/m
 
 echo ""
 echo "########################################"
-echo "PREBUILD SUCCESS V114"
-echo " - iOS fresh generated"
+echo "PREBUILD SUCCESS V171"
+echo " - Repository iOS project preserved"
 echo " - Name = MS Aidat"
 echo " - CFBundleName = Runner"
 echo " - Bundle = com.mleysoft.aidat"
 echo " - APNs entitlement source = production"
 echo " - Native push bridge source = present"
-echo " - NO signing/build command executed in Pre-build"
+echo " - AidatShare Share Extension preserved
+ - NO signing/build command executed in Pre-build"
 echo "########################################"

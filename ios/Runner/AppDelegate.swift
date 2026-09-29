@@ -6,6 +6,8 @@ import FirebaseMessaging
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate, MessagingDelegate {
+  private var sharedFileChannel: FlutterMethodChannel?
+  private var pendingSharedFile: String?
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -77,8 +79,36 @@ import FirebaseMessaging
     UserDefaults.standard.set(fcmToken ?? "", forKey: "mleysoft_aidat_fcm_token")
   }
 
+  override func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
+    if url.isFileURL {
+      let accessed = url.startAccessingSecurityScopedResource()
+      defer { if accessed { url.stopAccessingSecurityScopedResource() } }
+      do {
+        let ext = url.pathExtension.isEmpty ? "xlsx" : url.pathExtension
+        let target = FileManager.default.temporaryDirectory.appendingPathComponent("shared_\(UUID().uuidString).\(ext)")
+        if FileManager.default.fileExists(atPath: target.path) { try FileManager.default.removeItem(at: target) }
+        try FileManager.default.copyItem(at: url, to: target)
+        pendingSharedFile = target.path
+        sharedFileChannel?.invokeMethod("sharedFileReceived", arguments: target.path)
+        return true
+      } catch { return false }
+    }
+    return super.application(app, open: url, options: options)
+  }
+
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+
+    sharedFileChannel = FlutterMethodChannel(
+      name: "com.mleysoft.aidat/shared_file",
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    )
+    sharedFileChannel?.setMethodCallHandler { [weak self] call, result in
+      guard call.method == "getPendingSharedFile" else { result(FlutterMethodNotImplemented); return }
+      let path = self?.pendingSharedFile
+      self?.pendingSharedFile = nil
+      result(path)
+    }
 
     let channel = FlutterMethodChannel(
       name: "com.mleysoft.aidat/legal_browser",

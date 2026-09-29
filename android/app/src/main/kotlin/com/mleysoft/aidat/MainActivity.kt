@@ -2,6 +2,7 @@ package com.mleysoft.aidat
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.content.Intent
 import android.os.Build
 import android.graphics.Color
 import android.net.Uri
@@ -14,6 +15,9 @@ class MainActivity : FlutterActivity() {
     private val channelName = "com.mleysoft.aidat/notifications"
     private val requestCode = 4901
     private val legalChannelName = "com.mleysoft.aidat/legal_browser"
+    private val sharedFileChannelName = "com.mleysoft.aidat/shared_file"
+    private var sharedFileChannel: MethodChannel? = null
+    private var pendingSharedFile: String? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -32,6 +36,15 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+        sharedFileChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, sharedFileChannelName)
+        sharedFileChannel!!.setMethodCallHandler { call, result ->
+            when(call.method){
+                "getPendingSharedFile" -> { val p=pendingSharedFile; pendingSharedFile=null; result.success(p) }
+                else -> result.notImplemented()
+            }
+        }
+        handleSharedIntent(intent, false)
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, legalChannelName).setMethodCallHandler { call, result ->
             if (call.method == "open") {
                 val url = call.argument<String>("url")
@@ -53,4 +66,29 @@ class MainActivity : FlutterActivity() {
         }
 
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleSharedIntent(intent, true)
+    }
+
+    private fun handleSharedIntent(intent: Intent?, notifyFlutter: Boolean) {
+        if (intent == null) return
+        val uri: Uri? = when (intent.action) {
+            Intent.ACTION_SEND -> intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+            Intent.ACTION_VIEW -> intent.data
+            else -> null
+        }
+        if (uri == null) return
+        try {
+            val displayName = uri.lastPathSegment?.substringAfterLast('/') ?: "banka_hareketleri.xlsx"
+            val safeName = displayName.replace(Regex("[^A-Za-z0-9._-]"), "_")
+            val outFile = java.io.File(cacheDir, "shared_${System.currentTimeMillis()}_$safeName")
+            contentResolver.openInputStream(uri)?.use { input -> outFile.outputStream().use { output -> input.copyTo(output) } } ?: return
+            pendingSharedFile = outFile.absolutePath
+            if (notifyFlutter) sharedFileChannel?.invokeMethod("sharedFileReceived", pendingSharedFile)
+        } catch (_: Exception) { }
+    }
+
 }

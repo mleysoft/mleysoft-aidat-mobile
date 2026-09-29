@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../core/api.dart';
 import '../core/loading.dart';
@@ -28,7 +29,13 @@ class _ManagerShellState extends State<ManagerShell>{
  final allPages=const [ManagerDashboard(),ManagerSitesPage(),BlocksPage(),ApartmentsPage(),ResidentsManagerPage(),NativeListPage(kind:'dues',title:'Aidatlar'),NativeListPage(kind:'payments',title:'Tahsilatlar'),ExpensesPage(),AnnouncementsManagerPage(),TicketsManagerPage(),FinancePage(),ReportsManagerPage(),ManagerSubscriptionPage(),NotificationsManagerPage(),AutomationManagerPage(),CardPaymentIntegrationPage()];
  final allLabels=['Genel Bakış','Siteler','Bloklar','Daireler','Kat Malikleri','Aidatlar','Tahsilatlar','Giderler','Duyurular','Talepler','Kasa & Banka','Raporlar','Plan Durumu','Bildirimler','Otomasyon Ayarları','Sanal POS Entegrasyonu'];
  final allIcons=[Icons.grid_view_rounded,Icons.location_city_rounded,Icons.apartment_rounded,Icons.meeting_room_rounded,Icons.groups_rounded,Icons.account_balance_wallet_rounded,Icons.payments_rounded,Icons.receipt_long_rounded,Icons.campaign_rounded,Icons.build_circle_rounded,Icons.account_balance_rounded,Icons.analytics_rounded,Icons.credit_card_rounded,Icons.notifications_active_rounded,Icons.auto_awesome_rounded,Icons.credit_card_rounded];
- @override void initState(){super.initState();boot();}
+ @override void initState(){super.initState();_setupSharedFiles();boot();}
+ Future<void> _setupSharedFiles() async {
+  const ch=MethodChannel('com.mleysoft.aidat/shared_file');
+  ch.setMethodCallHandler((call) async {if(call.method=='sharedFileReceived' && call.arguments is String){_openSharedBankFile(call.arguments as String);}});
+  try{final path=await ch.invokeMethod<String>('getPendingSharedFile');if(path!=null&&path.isNotEmpty){WidgetsBinding.instance.addPostFrameCallback((_)=>_openSharedBankFile(path));}}catch(_){}
+ }
+ void _openSharedBankFile(String path){if(!mounted||path.isEmpty)return;Navigator.push(context,MaterialPageRoute(builder:(_)=>BankStatementImportPage(initialPath:path)));}
  Future<void>boot()async{try{final d=await Api.request('manager-sites?action=list');portfolio=d['portfolio_enabled']==true&&d['selected_site_id']==null;if(!portfolio){try{final x=await Api.request('manager?action=dashboard');subscriptionActive=x['subscription_active']==true;Api.managerPackageActive=subscriptionActive;activeSiteName='${x['profile']?['site_name']??''}'.trim();}catch(_){}}else{activeSiteName='';}}catch(_){portfolio=false;}loading=false;if(mounted)setState((){});}
  Future<void>logout()async{await PushService.deactivateForLogout();try{await Api.request('logout',method:'POST');}catch(_){}await Api.clear();if(mounted)Navigator.pushAndRemoveUntil(context,MaterialPageRoute(builder:(_)=>const LoginScreen()),(_)=>false);}
  @override Widget build(BuildContext c){
@@ -1072,6 +1079,14 @@ class _FinancePageState extends State<FinancePage> {
     if(d==null)return const Center(child:BrandLoader());
     return RefreshIndicator(onRefresh:load,child:ListView(padding:const EdgeInsets.all(16),children:[
       head('Kasa / Banka',null),
+      SoftCard(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        const Text('Banka Ekstresi Eşleştirme',style:TextStyle(fontSize:16,fontWeight:FontWeight.w900)),
+        const SizedBox(height:5),
+        const Text('Bankadan indirdiğiniz Excel/CSV hareket dosyasındaki ödeme referansları açık aidatlarla otomatik eşleştirilir. Kapanmış aidatlar ve daha önce işlenen hareketler tekrar tahsil edilmez.',style:TextStyle(fontSize:11.5,color:muted,height:1.4)),
+        const SizedBox(height:12),
+        SizedBox(width:double.infinity,child:FilledButton.icon(onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const BankStatementImportPage())),icon:const Icon(Icons.upload_file_rounded),label:const Text('Banka Ekstresi Yükle')))
+      ])),
+      const SizedBox(height:12),
       ...(d!['accounts'] as List).map((r)=>Card(child:ListTile(
         leading:Icon(r['type']=='bank'?Icons.account_balance:Icons.payments),
         title:Text(r['name']),
@@ -1087,6 +1102,48 @@ class _FinancePageState extends State<FinancePage> {
     ]));
   }
 }
+
+class BankStatementImportPage extends StatefulWidget{
+  final String? initialPath;
+  const BankStatementImportPage({super.key,this.initialPath});
+  @override State<BankStatementImportPage> createState()=>_BankStatementImportPageState();
+}
+class _BankStatementImportPageState extends State<BankStatementImportPage>{
+  List accounts=[];List recent=[];int? accountId;String? path;String? fileName;bool busy=true,uploading=false;Map<String,dynamic>? result;
+  @override void initState(){super.initState();path=widget.initialPath;if(path!=null)fileName=path!.split(Platform.pathSeparator).last;load();}
+  Future<void>load()async{try{final d=await Api.request('manager?action=bank_import_info');accounts=d['accounts']??[];recent=d['recent']??[];if(accounts.length==1)accountId=int.tryParse('${accounts.first['id']}');}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$e')));}busy=false;if(mounted)setState((){});}
+  Future<void>pick()async{final r=await FilePicker.platform.pickFiles(type:FileType.custom,allowedExtensions:['xlsx','csv','mt940','sta','txt']);if(r==null||r.files.isEmpty)return;final f=r.files.single;if(f.path==null)return;setState((){path=f.path;fileName=f.name;result=null;});}
+  Future<void>upload()async{
+    if(uploading||path==null||accountId==null)return;
+    if(!await requireManagerPackage(context))return;
+    setState(()=>uploading=true);
+    try{
+      final f=File(path!);if(!await f.exists())throw Exception('Paylaşılan dosyaya erişilemedi. Dosyayı yeniden seçin.');
+      final bytes=await f.readAsBytes();if(bytes.length>8*1024*1024)throw Exception('Dosya en fazla 8 MB olabilir.');
+      final r=await Api.request('manager',method:'POST',body:{'action':'bank_import_upload','finance_account_id':accountId,'filename':fileName??'statement.xlsx','data_base64':base64Encode(bytes)});
+      result=r;await load();if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('${r['message']}')));
+    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$e'.replaceFirst('Exception: ',''))));}
+    uploading=false;if(mounted)setState((){});
+  }
+  @override Widget build(BuildContext c){
+    if(busy)return const Scaffold(backgroundColor:bg,body:Center(child:BrandLoader()));
+    return Scaffold(backgroundColor:bg,appBar:AppBar(title:const Text('Banka Ekstresi Yükle')),body:ListView(padding:const EdgeInsets.all(18),children:[
+      SoftCard(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        const Text('Otomatik Aidat Eşleştirme',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),const SizedBox(height:6),
+        const Text('Excel içindeki ödeme açıklamalarında MleySoft referans kodu bulunan açık aidatlar otomatik kapatılır. Kapanmış referanslar atlanır; aynı banka hareketi ikinci kez ödeme oluşturmaz.',style:TextStyle(fontSize:11.5,color:muted,height:1.45)),const SizedBox(height:14),
+        if(accounts.isEmpty)const Text('Aktif banka hesabı bulunamadı. Önce Kasa / Banka bölümünde bir banka hesabı oluşturun.',style:TextStyle(color:danger,fontWeight:FontWeight.w700))
+        else DropdownButtonFormField<int>(initialValue:accountId,decoration:const InputDecoration(labelText:'Banka Hesabı'),items:accounts.map<DropdownMenuItem<int>>((a)=>DropdownMenuItem(value:int.parse('${a['id']}'),child:Text('${a['name']}'))).toList(),onChanged:(v)=>setState(()=>accountId=v)),
+        const SizedBox(height:12),
+        OutlinedButton.icon(onPressed:pick,icon:const Icon(Icons.description_rounded),label:Text(fileName==null?'Excel / Hesap Hareketi Dosyası Seç':fileName!,overflow:TextOverflow.ellipsis)),
+        const SizedBox(height:12),
+        SizedBox(width:double.infinity,height:50,child:FilledButton.icon(onPressed:(path==null||accountId==null||uploading)?null:upload,icon:uploading?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.auto_awesome_rounded),label:Text(uploading?'Eşleştiriliyor...':'Yükle ve Aidatları Eşleştir')))
+      ])),
+      if(result!=null)...[const SizedBox(height:12),SoftCard(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('İşlem Sonucu',style:TextStyle(fontWeight:FontWeight.w900)),const SizedBox(height:8),Text('${result!['matched']??0} aidat kapatıldı · ${result!['ignored']??0} kapanmış referans atlandı · ${result!['duplicates']??0} mükerrer hareket atlandı · ${result!['unmatched']??0} eşleşmeyen hareket',style:const TextStyle(height:1.5))]))],
+      if(recent.isNotEmpty)...[const SizedBox(height:16),const Text('Son İçe Aktarılan Hareketler',style:TextStyle(fontSize:17,fontWeight:FontWeight.w900)),const SizedBox(height:6),...recent.take(10).map((r)=>Card(child:ListTile(dense:true,title:Text(r['reference_code']?.toString().isNotEmpty==true?'${r['reference_code']}':'Referans bulunamadı',style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('${r['account_name']} · ${r['transaction_at']}'),trailing:Column(mainAxisAlignment:MainAxisAlignment.center,crossAxisAlignment:CrossAxisAlignment.end,children:[Text(money(r['amount']),style:const TextStyle(fontWeight:FontWeight.w900)),Text('${r['status']}',style:TextStyle(fontSize:10,color:r['status']=='matched'?success:muted))]))))]
+    ]));
+  }
+}
+
 Widget head(String title,VoidCallback? add)=>PageTitle(title,subtitle:'Kayıtları yönetin ve güncel bilgileri görüntüleyin',action:add==null?null:FilledButton.icon(onPressed:add,icon:const Icon(Icons.add_rounded),label:const Text('Yeni')));
 Future<bool> form(BuildContext c,String title,List<Widget> fields) async {
   final result=await showModalBottomSheet<bool>(

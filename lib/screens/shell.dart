@@ -233,10 +233,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
-            child: _ManagerPaymentCard(Map<String, dynamic>.from(d!['manager_payment_info'] ?? {})),
-          ),
           if (d!['active_due'] != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
@@ -323,7 +319,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 class _ManagerPaymentCard extends StatelessWidget{
  final Map<String,dynamic> info;const _ManagerPaymentCard(this.info);
  Future<void> _copy(BuildContext c,String value,String label)async{if(value.trim().isEmpty)return;await Clipboard.setData(ClipboardData(text:value));if(c.mounted)ScaffoldMessenger.of(c).showSnackBar(SnackBar(content:Text('$label kopyalandı'),duration:const Duration(milliseconds:1200)));}
- @override Widget build(BuildContext c){final name='${info['manager_name']??''}'.trim(),iban='${info['iban']??''}'.trim(),account='${info['bank_account_name']??''}'.trim();return SoftCard(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[const IconBubble(Icons.account_balance_rounded,blue),const SizedBox(width:11),const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Yönetici Banka Bilgileri',style:TextStyle(fontWeight:FontWeight.w900,fontSize:16,color:ink)),Text('Ödeme yaparken bilgileri tek dokunuşla kopyalayın',style:TextStyle(fontSize:10.5,color:muted))]))]),const SizedBox(height:15),_copyRow(c,'AD SOYAD',name.isEmpty?'Henüz tanımlanmadı':name,name,'Ad soyad'),const SizedBox(height:9),_copyRow(c,'IBAN',iban.isEmpty?'Henüz tanımlanmadı':iban,iban,'IBAN',subtitle:account)]));}
+ @override Widget build(BuildContext c){final name='${info['manager_name']??''}'.trim(),iban='${info['iban']??''}'.trim(),account='${info['bank_account_name']??''}'.trim(),ref='${info['payment_reference']??''}'.trim();return SoftCard(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[const IconBubble(Icons.account_balance_rounded,blue),const SizedBox(width:11),const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Havale / EFT Bilgileri',style:TextStyle(fontWeight:FontWeight.w900,fontSize:16,color:ink)),Text('Ödemeyi doğru aidata eşleştirmek için referans kodunu açıklamaya yazın',style:TextStyle(fontSize:10.5,color:muted))]))]),const SizedBox(height:15),_copyRow(c,'YÖNETİCİ AD SOYAD',name.isEmpty?'Henüz tanımlanmadı':name,name,'Yönetici adı'),const SizedBox(height:9),_copyRow(c,'IBAN',iban.isEmpty?'Henüz tanımlanmadı':iban,iban,'IBAN',subtitle:account),if(ref.isNotEmpty)...[const SizedBox(height:9),_copyRow(c,'ÖDEME REFERANS KODU',ref,ref,'Ödeme referans kodu')]]));}
  Widget _copyRow(BuildContext c,String label,String shown,String raw,String copiedLabel,{String subtitle=''})=>Container(padding:const EdgeInsets.fromLTRB(13,10,8,10),decoration:BoxDecoration(color:const Color(0xFFF8FAFC),borderRadius:BorderRadius.circular(14),border:Border.all(color:line)),child:Row(children:[Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(label,style:const TextStyle(fontSize:9,color:muted,fontWeight:FontWeight.w900,letterSpacing:.7)),const SizedBox(height:3),Text(shown,style:const TextStyle(fontSize:12.5,fontWeight:FontWeight.w800,color:ink)),if(subtitle.isNotEmpty)Padding(padding:const EdgeInsets.only(top:2),child:Text(subtitle,style:const TextStyle(fontSize:9.5,color:muted))) ])),if(raw.isNotEmpty)IconButton(tooltip:'Kopyala',onPressed:()=>_copy(c,raw,copiedLabel),icon:const Icon(Icons.copy_rounded,size:19,color:blue))]));
 }
 
@@ -340,6 +336,9 @@ class _DuesPageState extends State<DuesPage> with WidgetsBindingObserver {
   bool busy = true;
   String? error;
   List<Map<String, dynamic>> items = [];
+  Map<String,dynamic> paymentInfo = {};
+  String totalPaymentReference = '';
+  bool cardPaymentEnabled = false;
   String period = '';
   String status = 'all';
 
@@ -368,6 +367,9 @@ class _DuesPageState extends State<DuesPage> with WidgetsBindingObserver {
       items = List<Map<String, dynamic>>.from(
         (d['items'] as List? ?? []).map((e) => Map<String, dynamic>.from(e)),
       );
+      paymentInfo=Map<String,dynamic>.from(d['manager_payment_info']??{});
+      totalPaymentReference='${d['total_payment_reference']??''}';
+      cardPaymentEnabled=(d['card_payment']?['enabled']==true);
       error = null;
     } catch (e) {
       error = '$e'.replaceFirst('Exception: ', '');
@@ -422,11 +424,13 @@ class _DuesPageState extends State<DuesPage> with WidgetsBindingObserver {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 18),
             child: SummaryScroller(children: [
+              CompactStatCard(label: 'Kalan Borç', value: tl(debt), icon: Icons.warning_amber_rounded, color: debt > .009 ? danger : success),
               CompactStatCard(label: 'Toplam Aidat', value: tl(total), icon: Icons.receipt_long_outlined, color: blue),
               CompactStatCard(label: 'Ödenen', value: tl(paid), icon: Icons.check_circle_outline_rounded, color: success),
-              CompactStatCard(label: 'Kalan Borç', value: tl(debt), icon: Icons.warning_amber_rounded, color: debt > .009 ? danger : success),
             ]),
           ),
+          const SizedBox(height: 14),
+          if(debt>.009) Padding(padding:const EdgeInsets.symmetric(horizontal:18),child:InkWell(borderRadius:BorderRadius.circular(20),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>MultiDuePaymentPage(items:items,paymentInfo:paymentInfo,totalReference:totalPaymentReference,cardEnabled:cardPaymentEnabled))).then((_)=>load()),child:Ink(padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:ink,borderRadius:BorderRadius.circular(20)),child:Row(children:[Container(width:44,height:44,decoration:BoxDecoration(color:brand,borderRadius:BorderRadius.circular(14)),child:const Icon(Icons.payments_rounded,color:ink)),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Borçlarını Öde',style:TextStyle(color:Colors.white,fontSize:16,fontWeight:FontWeight.w900)),Text('Aidatlarını seç, toplamı gör ve tek işlemde öde',style:TextStyle(color:Colors.white.withOpacity(.7),fontSize:11))])),const Icon(Icons.chevron_right_rounded,color:Colors.white)])))),
           const SizedBox(height: 14),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -513,6 +517,9 @@ class _DuesPageState extends State<DuesPage> with WidgetsBindingObserver {
     );
   }
 }
+
+class MultiDuePaymentPage extends StatefulWidget{final List<Map<String,dynamic>> items;final Map<String,dynamic> paymentInfo;final String totalReference;final bool cardEnabled;const MultiDuePaymentPage({super.key,required this.items,required this.paymentInfo,required this.totalReference,required this.cardEnabled});@override State<MultiDuePaymentPage> createState()=>_MultiDuePaymentPageState();}
+class _MultiDuePaymentPageState extends State<MultiDuePaymentPage>{late Set<int> selected;bool paying=false;@override void initState(){super.initState();selected=widget.items.where((r)=>nv(r['balance'])>.009).map((r)=>int.parse('${r['id']}')).toSet();}List<Map<String,dynamic>> get open=>widget.items.where((r)=>nv(r['balance'])>.009).toList();double get total=>open.where((r)=>selected.contains(int.parse('${r['id']}'))).fold<double>(0,(a,r)=>a+nv(r['balance']));Future<void>pay()async{if(selected.isEmpty||paying)return;setState(()=>paying=true);try{final r=await Api.request('card-payment-multi',method:'POST',body:{'due_ids':selected.toList()});final result=await Navigator.push<String>(context,MaterialPageRoute(builder:(_)=>CardPaymentWebViewPage(checkoutUrl:Uri.parse('${r['checkout_url']}'),token:'${r['token']??''}',dueId:int.parse('${r['due_ids'][0]}'))));if(mounted&&result=='success'){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Seçtiğiniz aidatların ödemesi başarıyla tamamlandı.')));Navigator.pop(context,true);}}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$e'.replaceFirst('Exception: ',''))));}finally{paying=false;if(mounted)setState((){});}}@override Widget build(BuildContext c){final info=Map<String,dynamic>.from(widget.paymentInfo)..['payment_reference']=widget.totalReference;return Scaffold(backgroundColor:bg,appBar:AppBar(title:const Text('Borçlarını Öde')),body:ListView(padding:const EdgeInsets.fromLTRB(18,16,18,32),children:[SoftCard(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Ödenecek Aidatları Seç',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),const SizedBox(height:5),const Text('Rakam girmek yerine kapatmak istediğiniz aidatları seçin. Ödeme, seçilen aidatlara ayrı ayrı işlenir.',style:TextStyle(color:muted,fontSize:11,height:1.4)),const SizedBox(height:12),...open.map((r){final id=int.parse('${r['id']}');return CheckboxListTile(contentPadding:EdgeInsets.zero,value:selected.contains(id),onChanged:(v)=>setState(()=>v==true?selected.add(id):selected.remove(id)),title:Text('${r['period']}',style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('${r['apartment']} • Son ödeme ${r['due_date']}'),secondary:Text(tl(r['balance']),style:const TextStyle(fontWeight:FontWeight.w900,color:danger));})])),const SizedBox(height:12),Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(color:ink,borderRadius:BorderRadius.circular(20)),child:Row(children:[const Expanded(child:Text('Seçili Aidatlar Toplamı',style:TextStyle(color:Colors.white70,fontWeight:FontWeight.w700))),Text(tl(total),style:const TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.w900))])),const SizedBox(height:12),_ManagerPaymentCard(info),const SizedBox(height:12),SizedBox(height:54,child:FilledButton.icon(onPressed:(!widget.cardEnabled||selected.isEmpty||paying)?null:pay,icon:paying?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.credit_card_rounded),label:Text(paying?'Ödeme hazırlanıyor...':'Kredi Kartı ile ${tl(total)} Öde',style:const TextStyle(fontWeight:FontWeight.w900))))]));}}
 
 class _ActiveDueCard extends StatelessWidget{final Map<String,dynamic> due;const _ActiveDueCard(this.due);@override Widget build(BuildContext c){final balance=nv(due['balance']);return InkWell(borderRadius:BorderRadius.circular(24),onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>DueDetailPage(dueId:int.parse('${due['id']}')))),child:Ink(decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF101828),Color(0xFF344054)]),borderRadius:BorderRadius.circular(24),boxShadow:const[BoxShadow(color:Color(0x25101828),blurRadius:24,offset:Offset(0,10))]),padding:const EdgeInsets.all(18),child:Row(children:[Container(width:48,height:48,decoration:BoxDecoration(color:brand,borderRadius:BorderRadius.circular(16)),child:const Icon(Icons.receipt_long_rounded,color:ink)),const SizedBox(width:13),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('AKTİF AİDAT · DETAYLARI GÖR',style:TextStyle(fontSize:10,color:brand,fontWeight:FontWeight.w900,letterSpacing:.5)),const SizedBox(height:4),Text('${due['period']??''}',style:const TextStyle(color:Colors.white,fontSize:18,fontWeight:FontWeight.w900)),const SizedBox(height:2),Text('${due['apartment']??''} • Son ödeme ${due['due_date']??'-'}',style:const TextStyle(color:Color(0xFFD0D5DD),fontSize:10.5))])),Column(crossAxisAlignment:CrossAxisAlignment.end,children:[Text(tl(due['amount']),style:const TextStyle(color:Colors.white,fontSize:16,fontWeight:FontWeight.w900)),const SizedBox(height:4),Text(balance>0?'Kalan ${tl(balance)}':'Ödendi',style:TextStyle(color:balance>0?const Color(0xFFFFD166):const Color(0xFF9EF0BE),fontSize:10.5,fontWeight:FontWeight.w800)),const SizedBox(height:4),const Icon(Icons.chevron_right_rounded,color:Colors.white70,size:19)])])));}}
 

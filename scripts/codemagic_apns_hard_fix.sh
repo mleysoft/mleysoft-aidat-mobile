@@ -7,7 +7,7 @@ if [ -d "mobile_app" ] && [ -f "mobile_app/pubspec.yaml" ]; then
 fi
 
 echo "========================================"
-echo " MLEYSOFT AIDAT IOS PREBUILD V172"
+echo " MLEYSOFT AIDAT IOS PREBUILD V173"
 echo "========================================"
 
 echo "1) Repository iOS projesi ve Share Extension korunuyor..."
@@ -66,7 +66,7 @@ grep -q "s.dependency 'FirebaseMessaging'" packages/mleysoft_native_bridge/ios/m
 
 echo ""
 echo "########################################"
-echo "PREBUILD SUCCESS V172"
+echo "PREBUILD SUCCESS V173"
 echo " - Repository iOS project preserved"
 echo " - Name = MS Aidat"
 echo " - CFBundleName = Runner"

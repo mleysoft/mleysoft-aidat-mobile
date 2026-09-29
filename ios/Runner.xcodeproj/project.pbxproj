@@ -59,7 +59,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXNativeTarget section */
-		97C146E71CF9000F007C117D /* Runner */ = {isa = PBXNativeTarget; buildConfigurationList = 97C147051CF9000F007C117D; buildPhases = (9740EEB61CF901F6004384FC /* Run Script */, 97C146EA1CF9000F007C117D /* Sources */, 97C146EB1CF9000F007C117D /* Frameworks */, 97C146EC1CF9000F007C117D /* Resources */, 3B06AD1E1E4923F5004D2608 /* Thin Binary */, A1B2C3D81CF9000F007C117D /* MleySoft iOS Finalize */, B17000410000000000000001 /* Embed App Extensions */,); buildRules = (); dependencies = (B17000510000000000000001 /* PBXTargetDependency */,); name = Runner; productName = Runner; productReference = 97C146E61CF9000F007C117D /* Runner.app */; productType = "com.apple.product-type.application"; };
+		97C146E71CF9000F007C117D /* Runner */ = {isa = PBXNativeTarget; buildConfigurationList = 97C147051CF9000F007C117D; buildPhases = (9740EEB61CF901F6004384FC /* Run Script */, 97C146EA1CF9000F007C117D /* Sources */, 97C146EB1CF9000F007C117D /* Frameworks */, 97C146EC1CF9000F007C117D /* Resources */, B17000410000000000000001 /* Embed App Extensions */, 3B06AD1E1E4923F5004D2608 /* Thin Binary */,); buildRules = (); dependencies = (B17000510000000000000001 /* PBXTargetDependency */,); name = Runner; productName = Runner; productReference = 97C146E61CF9000F007C117D /* Runner.app */; productType = "com.apple.product-type.application"; };
 		B17000610000000000000001 /* AidatShare */ = {isa = PBXNativeTarget; buildConfigurationList = B17000910000000000000001 /* Build configuration list for PBXNativeTarget "AidatShare" */; buildPhases = (B17000710000000000000001 /* Sources */, B17000210000000000000001 /* Frameworks */, B17000720000000000000001 /* Resources */,); buildRules = (); dependencies = (); name = AidatShare; productName = AidatShare; productReference = B17000140000000000000001 /* AidatShare.appex */; productType = "com.apple.product-type.app-extension"; };
 /* End PBXNativeTarget section */
 
@@ -76,9 +76,8 @@ com.apple.Push = {enabled = 1;};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		3B06AD1E1E4923F5004D2608 /* Thin Binary */ = {isa = PBXShellScriptBuildPhase; alwaysOutOfDate = 1; buildActionMask = 2147483647; files = (); inputPaths = ("${TARGET_BUILD_DIR}/${INFOPLIST_PATH}",); name = "Thin Binary"; outputPaths = (); runOnlyForDeploymentPostprocessing = 0; shellPath = /bin/sh; shellScript = "/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" embed_and_thin"; };
+		3B06AD1E1E4923F5004D2608 /* Thin Binary */ = {isa = PBXShellScriptBuildPhase; alwaysOutOfDate = 1; buildActionMask = 2147483647; files = (); inputPaths = (); name = "Thin Binary"; outputPaths = (); runOnlyForDeploymentPostprocessing = 0; shellPath = /bin/sh; shellScript = "/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" embed_and_thin"; };
 		9740EEB61CF901F6004384FC /* Run Script */ = {isa = PBXShellScriptBuildPhase; alwaysOutOfDate = 1; buildActionMask = 2147483647; files = (); inputPaths = (); name = "Run Script"; outputPaths = (); runOnlyForDeploymentPostprocessing = 0; shellPath = /bin/sh; shellScript = "/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" build"; };
-		A1B2C3D81CF9000F007C117D /* MleySoft iOS Finalize */ = {isa = PBXShellScriptBuildPhase; alwaysOutOfDate = 1; buildActionMask = 2147483647; files = (); inputPaths = (); name = "MleySoft iOS Finalize"; outputPaths = (); runOnlyForDeploymentPostprocessing = 0; shellPath = /bin/sh; shellScript = "/bin/bash \"$SRCROOT/scripts/mleysoft_ios_finalize.sh\""; };
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */

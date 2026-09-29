@@ -518,8 +518,205 @@ class _DuesPageState extends State<DuesPage> with WidgetsBindingObserver {
   }
 }
 
-class MultiDuePaymentPage extends StatefulWidget{final List<Map<String,dynamic>> items;final Map<String,dynamic> paymentInfo;final String totalReference;final bool cardEnabled;const MultiDuePaymentPage({super.key,required this.items,required this.paymentInfo,required this.totalReference,required this.cardEnabled});@override State<MultiDuePaymentPage> createState()=>_MultiDuePaymentPageState();}
-class _MultiDuePaymentPageState extends State<MultiDuePaymentPage>{late Set<int> selected;bool paying=false;@override void initState(){super.initState();selected=widget.items.where((r)=>nv(r['balance'])>.009).map((r)=>int.parse('${r['id']}')).toSet();}List<Map<String,dynamic>> get open=>widget.items.where((r)=>nv(r['balance'])>.009).toList();double get total=>open.where((r)=>selected.contains(int.parse('${r['id']}'))).fold<double>(0,(a,r)=>a+nv(r['balance']));Future<void>pay()async{if(selected.isEmpty||paying)return;setState(()=>paying=true);try{final r=await Api.request('card-payment-multi',method:'POST',body:{'due_ids':selected.toList()});final result=await Navigator.push<String>(context,MaterialPageRoute(builder:(_)=>CardPaymentWebViewPage(checkoutUrl:Uri.parse('${r['checkout_url']}'),token:'${r['token']??''}',dueId:int.parse('${r['due_ids'][0]}'))));if(mounted&&result=='success'){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Seçtiğiniz aidatların ödemesi başarıyla tamamlandı.')));Navigator.pop(context,true);}}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$e'.replaceFirst('Exception: ',''))));}finally{paying=false;if(mounted)setState((){});}}@override Widget build(BuildContext c){final info=Map<String,dynamic>.from(widget.paymentInfo)..['payment_reference']=widget.totalReference;return Scaffold(backgroundColor:bg,appBar:AppBar(title:const Text('Borçlarını Öde')),body:ListView(padding:const EdgeInsets.fromLTRB(18,16,18,32),children:[SoftCard(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Ödenecek Aidatları Seç',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),const SizedBox(height:5),const Text('Rakam girmek yerine kapatmak istediğiniz aidatları seçin. Ödeme, seçilen aidatlara ayrı ayrı işlenir.',style:TextStyle(color:muted,fontSize:11,height:1.4)),const SizedBox(height:12),...open.map((r){final id=int.parse('${r['id']}');return CheckboxListTile(contentPadding:EdgeInsets.zero,value:selected.contains(id),onChanged:(v)=>setState(()=>v==true?selected.add(id):selected.remove(id)),title:Text('${r['period']}',style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('${r['apartment']} • Son ödeme ${r['due_date']}'),secondary:Text(tl(r['balance']),style:const TextStyle(fontWeight:FontWeight.w900,color:danger));})])),const SizedBox(height:12),Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(color:ink,borderRadius:BorderRadius.circular(20)),child:Row(children:[const Expanded(child:Text('Seçili Aidatlar Toplamı',style:TextStyle(color:Colors.white70,fontWeight:FontWeight.w700))),Text(tl(total),style:const TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.w900))])),const SizedBox(height:12),_ManagerPaymentCard(info),const SizedBox(height:12),SizedBox(height:54,child:FilledButton.icon(onPressed:(!widget.cardEnabled||selected.isEmpty||paying)?null:pay,icon:paying?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.credit_card_rounded),label:Text(paying?'Ödeme hazırlanıyor...':'Kredi Kartı ile ${tl(total)} Öde',style:const TextStyle(fontWeight:FontWeight.w900))))]));}}
+class MultiDuePaymentPage extends StatefulWidget {
+  final List<Map<String, dynamic>> items;
+  final Map<String, dynamic> paymentInfo;
+  final String totalReference;
+  final bool cardEnabled;
+
+  const MultiDuePaymentPage({
+    super.key,
+    required this.items,
+    required this.paymentInfo,
+    required this.totalReference,
+    required this.cardEnabled,
+  });
+
+  @override
+  State<MultiDuePaymentPage> createState() => _MultiDuePaymentPageState();
+}
+
+class _MultiDuePaymentPageState extends State<MultiDuePaymentPage> {
+  late Set<int> selected;
+  bool paying = false;
+
+  @override
+  void initState() {
+    super.initState();
+    selected = open.map((r) => int.parse('${r['id']}')).toSet();
+  }
+
+  List<Map<String, dynamic>> get open => widget.items
+      .where((r) => nv(r['balance']) > .009)
+      .toList();
+
+  double get total => open
+      .where((r) => selected.contains(int.parse('${r['id']}')))
+      .fold<double>(0, (sum, r) => sum + nv(r['balance']));
+
+  Future<void> pay() async {
+    if (selected.isEmpty || paying) return;
+    setState(() => paying = true);
+
+    try {
+      final r = await Api.request(
+        'card-payment-multi',
+        method: 'POST',
+        body: {'due_ids': selected.toList()},
+      );
+
+      final dueIds = (r['due_ids'] as List?) ?? const [];
+      if (dueIds.isEmpty) {
+        throw Exception('Ödeme için aidat bilgisi oluşturulamadı.');
+      }
+
+      final result = await Navigator.push<String>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CardPaymentWebViewPage(
+            checkoutUrl: Uri.parse('${r['checkout_url']}'),
+            token: '${r['token'] ?? ''}',
+            dueId: int.parse('${dueIds.first}'),
+          ),
+        ),
+      );
+
+      if (!mounted) return;
+      if (result == 'success') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Seçtiğiniz aidatların ödemesi başarıyla tamamlandı.'),
+          ),
+        );
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$e'.replaceFirst('Exception: ', ''))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => paying = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final info = Map<String, dynamic>.from(widget.paymentInfo)
+      ..['payment_reference'] = widget.totalReference;
+
+    return Scaffold(
+      backgroundColor: bg,
+      appBar: AppBar(title: const Text('Borçlarını Öde')),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 32),
+        children: [
+          SoftCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Ödenecek Aidatları Seç',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 5),
+                const Text(
+                  'Rakam girmek yerine kapatmak istediğiniz aidatları seçin. Ödeme, seçilen aidatlara ayrı ayrı işlenir.',
+                  style: TextStyle(color: muted, fontSize: 11, height: 1.4),
+                ),
+                const SizedBox(height: 12),
+                ...open.map((r) {
+                  final id = int.parse('${r['id']}');
+                  return CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: selected.contains(id),
+                    onChanged: (value) {
+                      setState(() {
+                        if (value == true) {
+                          selected.add(id);
+                        } else {
+                          selected.remove(id);
+                        }
+                      });
+                    },
+                    title: Text(
+                      '${r['period']}',
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    subtitle: Text(
+                      '${r['apartment']} • Son ödeme ${r['due_date']}',
+                    ),
+                    secondary: Text(
+                      tl(r['balance']),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        color: danger,
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: ink,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Seçili Aidatlar Toplamı',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Text(
+                  tl(total),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 21,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          _ManagerPaymentCard(info),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 54,
+            child: FilledButton.icon(
+              onPressed: (!widget.cardEnabled || selected.isEmpty || paying)
+                  ? null
+                  : pay,
+              icon: paying
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.credit_card_rounded),
+              label: Text(
+                paying
+                    ? 'Ödeme hazırlanıyor...'
+                    : 'Kredi Kartı ile ${tl(total)} Öde',
+                style: const TextStyle(fontWeight: FontWeight.w900),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _ActiveDueCard extends StatelessWidget{final Map<String,dynamic> due;const _ActiveDueCard(this.due);@override Widget build(BuildContext c){final balance=nv(due['balance']);return InkWell(borderRadius:BorderRadius.circular(24),onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>DueDetailPage(dueId:int.parse('${due['id']}')))),child:Ink(decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF101828),Color(0xFF344054)]),borderRadius:BorderRadius.circular(24),boxShadow:const[BoxShadow(color:Color(0x25101828),blurRadius:24,offset:Offset(0,10))]),padding:const EdgeInsets.all(18),child:Row(children:[Container(width:48,height:48,decoration:BoxDecoration(color:brand,borderRadius:BorderRadius.circular(16)),child:const Icon(Icons.receipt_long_rounded,color:ink)),const SizedBox(width:13),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('AKTİF AİDAT · DETAYLARI GÖR',style:TextStyle(fontSize:10,color:brand,fontWeight:FontWeight.w900,letterSpacing:.5)),const SizedBox(height:4),Text('${due['period']??''}',style:const TextStyle(color:Colors.white,fontSize:18,fontWeight:FontWeight.w900)),const SizedBox(height:2),Text('${due['apartment']??''} • Son ödeme ${due['due_date']??'-'}',style:const TextStyle(color:Color(0xFFD0D5DD),fontSize:10.5))])),Column(crossAxisAlignment:CrossAxisAlignment.end,children:[Text(tl(due['amount']),style:const TextStyle(color:Colors.white,fontSize:16,fontWeight:FontWeight.w900)),const SizedBox(height:4),Text(balance>0?'Kalan ${tl(balance)}':'Ödendi',style:TextStyle(color:balance>0?const Color(0xFFFFD166):const Color(0xFF9EF0BE),fontSize:10.5,fontWeight:FontWeight.w800)),const SizedBox(height:4),const Icon(Icons.chevron_right_rounded,color:Colors.white70,size:19)])])));}}
 

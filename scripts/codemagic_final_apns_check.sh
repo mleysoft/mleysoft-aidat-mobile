@@ -124,3 +124,15 @@ echo " - Bundle = com.mleysoft.aidat"
 echo " - Firebase plist = com.mleysoft.aidat"
 echo " - APNs = production"
 echo "########################################"
+
+EXT_PLIST="$TMP_DIR/Payload/Runner.app/PlugIns/AidatShare.appex/Info.plist"
+EXT_EXECUTABLE=$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$EXT_PLIST" 2>/dev/null || true)
+if [ -z "$EXT_EXECUTABLE" ]; then
+  echo "ERROR: AidatShare CFBundleExecutable missing"
+  exit 1
+fi
+if [ ! -f "$TMP_DIR/Payload/Runner.app/PlugIns/AidatShare.appex/$EXT_EXECUTABLE" ]; then
+  echo "ERROR: AidatShare executable not found: $EXT_EXECUTABLE"
+  exit 1
+fi
+echo "SHARE EXECUTABLE OK: $EXT_EXECUTABLE"

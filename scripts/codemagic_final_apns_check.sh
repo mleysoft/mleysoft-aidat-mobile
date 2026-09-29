@@ -7,7 +7,7 @@ if [ -d "mobile_app" ] && [ -f "mobile_app/pubspec.yaml" ]; then
 fi
 
 echo "========================================"
-echo " MLEYSOFT AIDAT FINAL IPA CHECK V176"
+echo " MLEYSOFT AIDAT FINAL IPA CHECK V178"
 echo "========================================"
 
 IPA="$(find build/ios/ipa -maxdepth 1 -name '*.ipa' -print -quit 2>/dev/null || true)"
@@ -131,7 +131,7 @@ fi
 
 echo ""
 echo "########################################"
-echo "FINAL IPA SUCCESS V176"
+echo "FINAL IPA SUCCESS V178"
 echo " - Name = MS Aidat"
 echo " - CFBundleName = Runner"
 echo " - Bundle = com.mleysoft.aidat"

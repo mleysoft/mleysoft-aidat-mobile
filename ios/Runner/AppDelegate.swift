@@ -125,6 +125,22 @@ import FirebaseMessaging
       result(path)
     }
 
+    let sharedAuthChannel = FlutterMethodChannel(
+      name: "com.mleysoft.aidat/shared_auth",
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    )
+    sharedAuthChannel.setMethodCallHandler { call, result in
+      guard call.method == "setToken",
+            let args = call.arguments as? [String: Any] else {
+        result(FlutterMethodNotImplemented); return
+      }
+      let token = (args["token"] as? String) ?? ""
+      let defaults = UserDefaults(suiteName: "group.com.mleysoft.aidat")
+      if token.isEmpty { defaults?.removeObject(forKey: "share_api_token") }
+      else { defaults?.set(token, forKey: "share_api_token") }
+      result(true)
+    }
+
     let channel = FlutterMethodChannel(
       name: "com.mleysoft.aidat/legal_browser",
       binaryMessenger: engineBridge.applicationRegistrar.messenger()

@@ -3,127 +3,51 @@ import UniformTypeIdentifiers
 
 final class ShareViewController: UIViewController {
     private let appGroup = "group.com.mleysoft.aidat"
+    private let apiURL = URL(string: "https://mleysoft.com/system/aidat/api/mobile/share-bank-import.php")!
     private let allowed = ["xls", "xlsx", "csv", "mt940", "sta", "txt"]
-    private let statusLabel = UILabel()
-    private let openButton = UIButton(type: .system)
-    private let closeButton = UIButton(type: .system)
-    private var imported = false
+    private var fileURL: URL?
+    private var sites: [[String: Any]] = []
+    private var banks: [[String: Any]] = []
+    private var siteId: Int?
+    private var bankId: Int?
+    private let siteButton = UIButton(type: .system), bankButton = UIButton(type: .system), uploadButton = UIButton(type: .system)
+    private let fileLabel = UILabel(), statusLabel = UILabel(), spinner = UIActivityIndicatorView(style: .medium)
 
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        view.backgroundColor = .systemBackground
-        buildUI()
-    }
-
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        if !imported { importFirstSupportedFile() }
-    }
+    override func viewDidLoad() { super.viewDidLoad(); view.backgroundColor = .systemGroupedBackground; buildUI(); importFile() }
 
     private func buildUI() {
-        let title = UILabel()
-        title.text = "MleySoft Aidat"
-        title.font = .systemFont(ofSize: 24, weight: .bold)
-        title.textAlignment = .center
-
-        statusLabel.text = "Banka ekstresi hazırlanıyor…"
-        statusLabel.font = .systemFont(ofSize: 16, weight: .medium)
-        statusLabel.textColor = .secondaryLabel
-        statusLabel.numberOfLines = 0
-        statusLabel.textAlignment = .center
-
-        openButton.setTitle("MleySoft Aidat'ı Aç", for: .normal)
-        openButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .bold)
-        openButton.isEnabled = false
-        openButton.addTarget(self, action: #selector(openMainApp), for: .touchUpInside)
-
-        closeButton.setTitle("Kapat", for: .normal)
-        closeButton.addTarget(self, action: #selector(closeExtension), for: .touchUpInside)
-
-        let stack = UIStackView(arrangedSubviews: [title, statusLabel, openButton, closeButton])
-        stack.axis = .vertical
-        stack.spacing = 18
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(stack)
-        NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 28),
-            stack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -28),
-            stack.centerYAnchor.constraint(equalTo: view.centerYAnchor)
-        ])
+        let icon = UIImageView(image: UIImage(systemName: "building.2.crop.circle.fill")); icon.tintColor = .label; icon.contentMode = .scaleAspectFit
+        NSLayoutConstraint.activate([icon.widthAnchor.constraint(equalToConstant: 42), icon.heightAnchor.constraint(equalToConstant: 42)])
+        let title = UILabel(); title.text = "Banka Ekstresi"; title.font = .systemFont(ofSize: 24, weight: .bold)
+        let sub = UILabel(); sub.text = "Siteyi ve banka hesabını seçin; ekstreyi uygulamayı açmadan eşleştirin."; sub.font = .systemFont(ofSize: 13); sub.textColor = .secondaryLabel; sub.numberOfLines = 0
+        let headText = UIStackView(arrangedSubviews:[title,sub]); headText.axis = .vertical; headText.spacing = 4
+        let head = UIStackView(arrangedSubviews:[icon,headText]); head.axis = .horizontal; head.spacing = 12; head.alignment = .center
+        configureSelector(siteButton, title:"Site seçiliyor…", icon:"building.2"); configureSelector(bankButton, title:"Banka hesabı", icon:"creditcard")
+        bankButton.isEnabled = false
+        fileLabel.font = .systemFont(ofSize:14, weight:.semibold); fileLabel.textColor = .secondaryLabel; fileLabel.numberOfLines = 2
+        let fileBox = box(UIStackView(arrangedSubviews:[UIImageView(image:UIImage(systemName:"doc.text.fill")),fileLabel])); (fileBox.subviews.first as? UIStackView)?.spacing = 10
+        uploadButton.setTitle("  Ekstreyi Yükle ve Eşleştir", for:.normal); uploadButton.setImage(UIImage(systemName:"sparkles"), for:.normal); uploadButton.titleLabel?.font = .systemFont(ofSize:16,weight:.bold); uploadButton.tintColor = .white; uploadButton.backgroundColor = .label; uploadButton.layer.cornerRadius = 14; uploadButton.heightAnchor.constraint(equalToConstant:54).isActive=true; uploadButton.isEnabled=false; uploadButton.addTarget(self,action:#selector(upload),for:.touchUpInside)
+        statusLabel.font = .systemFont(ofSize:13,weight:.medium); statusLabel.textColor = .secondaryLabel; statusLabel.numberOfLines=0; statusLabel.textAlignment = .center
+        let close=UIButton(type:.system); close.setTitle("Kapat",for:.normal); close.addTarget(self,action:#selector(close),for:.touchUpInside)
+        let content=UIStackView(arrangedSubviews:[head,siteButton,bankButton,fileBox,uploadButton,spinner,statusLabel,close]); content.axis = .vertical; content.spacing=14; content.translatesAutoresizingMaskIntoConstraints=false
+        let card=UIView(); card.backgroundColor = .secondarySystemGroupedBackground; card.layer.cornerRadius=24; card.layer.shadowOpacity=0.06; card.layer.shadowRadius=14; card.translatesAutoresizingMaskIntoConstraints=false; card.addSubview(content); view.addSubview(card)
+        NSLayoutConstraint.activate([card.leadingAnchor.constraint(equalTo:view.leadingAnchor,constant:18),card.trailingAnchor.constraint(equalTo:view.trailingAnchor,constant:-18),card.centerYAnchor.constraint(equalTo:view.centerYAnchor),content.leadingAnchor.constraint(equalTo:card.leadingAnchor,constant:20),content.trailingAnchor.constraint(equalTo:card.trailingAnchor,constant:-20),content.topAnchor.constraint(equalTo:card.topAnchor,constant:22),content.bottomAnchor.constraint(equalTo:card.bottomAnchor,constant:-18)])
     }
+    private func box(_ content:UIView)->UIView { let v=UIView();v.backgroundColor = .tertiarySystemGroupedBackground;v.layer.cornerRadius=14;content.translatesAutoresizingMaskIntoConstraints=false;v.addSubview(content);NSLayoutConstraint.activate([content.leadingAnchor.constraint(equalTo:v.leadingAnchor,constant:14),content.trailingAnchor.constraint(equalTo:v.trailingAnchor,constant:-14),content.topAnchor.constraint(equalTo:v.topAnchor,constant:14),content.bottomAnchor.constraint(equalTo:v.bottomAnchor,constant:-14)]);return v }
+    private func configureSelector(_ b:UIButton,title:String,icon:String){var c=UIButton.Configuration.gray();c.title=title;c.image=UIImage(systemName:icon);c.imagePadding=10;c.baseForegroundColor = .label;c.cornerStyle = .large;b.configuration=c;b.contentHorizontalAlignment = .leading;b.heightAnchor.constraint(equalToConstant:54).isActive=true}
 
-    private func importFirstSupportedFile() {
-        guard let items = extensionContext?.inputItems as? [NSExtensionItem] else { showError("Paylaşılan dosya alınamadı."); return }
-        let providers = items.flatMap { $0.attachments ?? [] }
-        guard let provider = providers.first(where: { $0.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) || $0.hasItemConformingToTypeIdentifier(UTType.data.identifier) }) else { showError("Desteklenen bir ekstre dosyası bulunamadı."); return }
-        let type = provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) ? UTType.fileURL.identifier : UTType.data.identifier
-        provider.loadItem(forTypeIdentifier: type, options: nil) { [weak self] item, _ in
-            guard let self else { return }
-            var source: URL?
-            if let url = item as? URL { source = url }
-            else if let data = item as? Data {
-                let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("banka_ekstresi.xls")
-                try? data.write(to: tmp)
-                source = tmp
-            }
-            guard let source else { self.showError("Dosya içeriği okunamadı."); return }
-            let ext = source.pathExtension.lowercased()
-            guard self.allowed.contains(ext) else { self.showError("Bu dosya türü desteklenmiyor: .\(ext)"); return }
-            guard let root = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: self.appGroup) else { self.showError("Ortak uygulama alanına erişilemedi."); return }
-            let dir = root.appendingPathComponent("PendingBankImports", isDirectory: true)
-            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-            let target = dir.appendingPathComponent("\(UUID().uuidString).\(ext)")
-            let accessed = source.startAccessingSecurityScopedResource()
-            defer { if accessed { source.stopAccessingSecurityScopedResource() } }
-            do {
-                try FileManager.default.copyItem(at: source, to: target)
-                UserDefaults(suiteName: self.appGroup)?.set(target.path, forKey: "pending_bank_statement")
-                self.imported = true
-                DispatchQueue.main.async {
-                    self.statusLabel.text = "\(source.lastPathComponent) hazır. Dosya MleySoft Aidat'a aktarıldı."
-                    self.statusLabel.textColor = .label
-                    self.openButton.isEnabled = true
-                    self.tryOpenMainAppAutomatically()
-                }
-            } catch { self.showError("Dosya uygulamaya aktarılamadı: \(error.localizedDescription)") }
-        }
+    private func importFile(){ guard let items=extensionContext?.inputItems as? [NSExtensionItem],let p=items.flatMap({$0.attachments ?? []}).first(where:{$0.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier)||$0.hasItemConformingToTypeIdentifier(UTType.data.identifier)}) else { fail("Desteklenen ekstre dosyası bulunamadı.");return }; let type=p.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) ? UTType.fileURL.identifier:UTType.data.identifier;p.loadItem(forTypeIdentifier:type,options:nil){[weak self] item,_ in guard let self else{return};var src:URL?;if let u=item as? URL{src=u}else if let d=item as? Data{let t=FileManager.default.temporaryDirectory.appendingPathComponent("ekstre.xls");try? d.write(to:t);src=t};guard let src else{self.fail("Dosya okunamadı.");return};let ext=src.pathExtension.lowercased();guard self.allowed.contains(ext) else{self.fail("Bu dosya türü desteklenmiyor: .\(ext)");return};guard let root=FileManager.default.containerURL(forSecurityApplicationGroupIdentifier:self.appGroup) else{self.fail("Ortak uygulama alanına erişilemedi.");return};let dir=root.appendingPathComponent("ShareBank",isDirectory:true);try? FileManager.default.createDirectory(at:dir,withIntermediateDirectories:true);let target=dir.appendingPathComponent("\(UUID().uuidString).\(ext)");let access=src.startAccessingSecurityScopedResource();defer{if access{src.stopAccessingSecurityScopedResource()}};do{try FileManager.default.copyItem(at:src,to:target);self.fileURL=target;DispatchQueue.main.async{self.fileLabel.text=src.lastPathComponent;self.loadSites()}}catch{self.fail("Dosya hazırlanamadı: \(error.localizedDescription)")}}
     }
-
-    private func tryOpenMainAppAutomatically() {
-        guard let url = URL(string: "mleysoftaidat://bank-import") else { return }
-        extensionContext?.open(url) { [weak self] success in
-            DispatchQueue.main.async {
-                guard let self else { return }
-                if success {
-                    self.extensionContext?.completeRequest(returningItems: nil)
-                } else {
-                    // Share Extension noktası iOS'ta containing app'i foreground'a getirmeyi garanti etmez.
-                    // Dosya App Group'ta kalır ve ana uygulama bir sonraki açılışta doğrudan içe aktarma ekranını açar.
-                    self.statusLabel.text = "Dosya MleySoft Aidat'a aktarıldı. iOS uygulamayı otomatik öne getirmediyse paylaşım penceresini kapatıp MleySoft Aidat'ı açın; ekstre ekranı otomatik açılacaktır."
-                }
-            }
-        }
-    }
-
-    @objc private func openMainApp() {
-        guard let url = URL(string: "mleysoftaidat://bank-import") else { return }
-        extensionContext?.open(url) { [weak self] success in
-            DispatchQueue.main.async {
-                if success { self?.extensionContext?.completeRequest(returningItems: nil) }
-                else { self?.statusLabel.text = "iOS bu paylaşım ekranından uygulamayı öne getirmeye izin vermedi. Dosya kaydedildi; Kapat deyip MleySoft Aidat'ı açın." }
-            }
-        }
-    }
-
-    @objc private func closeExtension() {
-        extensionContext?.completeRequest(returningItems: nil)
-    }
-
-    private func showError(_ message: String) {
-        DispatchQueue.main.async {
-            self.statusLabel.text = message
-            self.statusLabel.textColor = .systemRed
-            self.openButton.isEnabled = false
-        }
-    }
+    private func token()->String?{UserDefaults(suiteName:appGroup)?.string(forKey:"share_api_token")}
+    private func request(query:[URLQueryItem]=[],body:[String:Any]?=nil,completion:@escaping(Result<[String:Any],Error>)->Void){guard let t=token(),!t.isEmpty else{fail("Oturum bilgisi paylaşım alanında yok. MleySoft Aidat'ı bir kez açıp tekrar deneyin.");return};var comp=URLComponents(url:apiURL,resolvingAgainstBaseURL:false)!;comp.queryItems=query;var r=URLRequest(url:comp.url!);r.setValue("Bearer \(t)",forHTTPHeaderField:"Authorization");r.setValue("application/json",forHTTPHeaderField:"Accept");if let body{r.httpMethod="POST";r.setValue("application/json",forHTTPHeaderField:"Content-Type");r.httpBody=try? JSONSerialization.data(withJSONObject:body)};URLSession.shared.dataTask(with:r){data,_,err in if let err{completion(.failure(err));return};guard let data,let j=(try? JSONSerialization.jsonObject(with:data)) as? [String:Any] else{completion(.failure(NSError(domain:"MleySoft",code:1,userInfo:[NSLocalizedDescriptionKey:"Sunucudan geçersiz yanıt alındı."])));return};if (j["ok"] as? Bool) != true{completion(.failure(NSError(domain:"MleySoft",code:2,userInfo:[NSLocalizedDescriptionKey:(j["message"] as? String) ?? "İşlem tamamlanamadı."])));return};completion(.success(j))}.resume()}
+    private func loadSites(){busy(true,"Siteler yükleniyor…");request{[weak self] res in guard let self else{return};self.sites=res["sites"] as? [[String:Any]] ?? [];DispatchQueue.main.async{self.busy(false,nil);if self.sites.isEmpty{self.fail("Yetkili olduğunuz aktif site bulunamadı.");return};let saved=UserDefaults(suiteName:self.appGroup)?.integer(forKey:"share_last_site") ?? 0;let selected=self.sites.first(where:{self.int($0["id"])==saved}) ?? self.sites.first!;self.selectSite(selected)}}}
+    private func selectSite(_ s:[String:Any]){siteId=int(s["id"]);setTitle(siteButton,"\(s["name"] ?? "Site")");siteButton.menu=UIMenu(children:sites.map{x in UIAction(title:"\(x["name"] ?? "Site")",state:int(x["id"])==siteId ? .on:.off){[weak self]_ in self?.selectSite(x)}});siteButton.showsMenuAsPrimaryAction=true;bankId=nil;banks=[];bankButton.isEnabled=false;setTitle(bankButton,"Banka hesapları yükleniyor…");guard let sid=siteId else{return};UserDefaults(suiteName:appGroup)?.set(sid,forKey:"share_last_site");request(query:[URLQueryItem(name:"site_id",value:"\(sid)")]){[weak self] res in guard let self else{return};self.banks=res["banks"] as? [[String:Any]] ?? [];DispatchQueue.main.async{if self.banks.isEmpty{self.setTitle(self.bankButton,"Bu sitede aktif banka hesabı yok");self.refreshUpload();return};self.bankButton.isEnabled=true;let saved=UserDefaults(suiteName:self.appGroup)?.integer(forKey:"share_last_bank_\(sid)") ?? 0;self.selectBank(self.banks.first(where:{self.int($0["id"])==saved}) ?? self.banks.first!)}}}
+    private func selectBank(_ b:[String:Any]){bankId=int(b["id"]);let iban=(b["iban"] as? String ?? "");setTitle(bankButton,"\(b["name"] ?? "Banka")\(iban.isEmpty ? "":" · "+String(iban.suffix(8)))");bankButton.menu=UIMenu(children:banks.map{x in UIAction(title:"\(x["name"] ?? "Banka")",state:int(x["id"])==bankId ? .on:.off){[weak self]_ in self?.selectBank(x)}});bankButton.showsMenuAsPrimaryAction=true;if let sid=siteId,let bid=bankId{UserDefaults(suiteName:appGroup)?.set(bid,forKey:"share_last_bank_\(sid)")};refreshUpload()}
+    private func int(_ v:Any?)->Int{if let x=v as? Int{return x};if let x=v as? NSNumber{return x.intValue};return Int("\(v ?? "0")") ?? 0}
+    private func setTitle(_ b:UIButton,_ t:String){var c=b.configuration;c?.title=t;b.configuration=c}
+    private func refreshUpload(){uploadButton.isEnabled = fileURL != nil && siteId != nil && bankId != nil}
+    @objc private func upload(){guard let f=fileURL,let sid=siteId,let bid=bankId else{return};do{let d=try Data(contentsOf:f);if d.count>8*1024*1024{fail("Dosya en fazla 8 MB olabilir.");return};busy(true,"Ekstre işleniyor…");request(body:["action":"upload","site_id":sid,"finance_account_id":bid,"filename":fileLabel.text ?? f.lastPathComponent,"data_base64":d.base64EncodedString()]){[weak self] res in DispatchQueue.main.async{guard let self else{return};self.busy(false,nil);self.statusLabel.text="✓ \(res["message"] ?? "Ekstre başarıyla işlendi.")";self.statusLabel.textColor = .systemGreen;self.uploadButton.isEnabled=false;try? FileManager.default.removeItem(at:f)}}}catch{fail("Dosya okunamadı: \(error.localizedDescription)")}}
+    private func busy(_ yes:Bool,_ text:String?){DispatchQueue.main.async{if yes{self.spinner.startAnimating()}else{self.spinner.stopAnimating()};self.siteButton.isEnabled = !yes;self.bankButton.isEnabled = !yes && !self.banks.isEmpty;self.uploadButton.isEnabled = !yes && self.fileURL != nil && self.siteId != nil && self.bankId != nil;if let text{self.statusLabel.text=text;self.statusLabel.textColor = .secondaryLabel}}}
+    private func fail(_ m:String){DispatchQueue.main.async{self.spinner.stopAnimating();self.statusLabel.text=m;self.statusLabel.textColor = .systemRed;self.uploadButton.isEnabled=false}}
+    @objc private func close(){extensionContext?.completeRequest(returningItems:nil)}
 }

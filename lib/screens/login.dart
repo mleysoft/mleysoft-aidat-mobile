@@ -2,10 +2,11 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../core/config.dart';
 import '../core/api.dart';import '../core/loading.dart';import '../core/push.dart';import '../core/ui.dart';import 'shell.dart';import 'manager_shell.dart';import 'admin_shell.dart';
 class LoginScreen extends StatefulWidget{const LoginScreen({super.key});@override State<LoginScreen> createState()=>_LoginScreenState();}
-class _LoginScreenState extends State<LoginScreen>{static const _legalChannel=MethodChannel('com.mleysoft.aidat/legal_browser');
+class _LoginScreenState extends State<LoginScreen>{
 static final TextInputFormatter _residentPhoneFormatter=TextInputFormatter.withFunction((oldValue,newValue){
   var digits=newValue.text.replaceAll(RegExp(r'\D'),'');
   final addedZero=digits.startsWith('5');
@@ -15,7 +16,20 @@ static final TextInputFormatter _residentPhoneFormatter=TextInputFormatter.withF
   if(offset<0)offset=0;if(offset>digits.length)offset=digits.length;
   return TextEditingValue(text:digits,selection:TextSelection.collapsed(offset:offset));
 });int tab=0;bool busy=false,hide=true,otpSent=false,register=false,locationsBusy=false;String? err,province,district;List<Map<String,dynamic>> provinces=[];List<String> districts=[];final email=TextEditingController(),pw=TextEditingController(),phone=TextEditingController(),otp=TextEditingController(),name=TextEditingController(),site=TextEditingController(),regPhone=TextEditingController();
-Future<void>_openLegal(String page)async{final base=AppConfig.legalUrl(page);final u=base.contains('?')?'$base&app=1':'$base?app=1';try{await _legalChannel.invokeMethod('open',{'url':u});}catch(_){if(mounted)setState(()=>err='Sayfa açılamadı.');}}
+Future<void>_openLegal(String page)async{
+  final base=AppConfig.legalUrl(page);
+  final uri=Uri.parse(base).replace(queryParameters:{...Uri.parse(base).queryParameters,'app':'1'});
+  try{
+    // HTTPS sayfaları için canLaunchUrl kontrolü kullanmıyoruz. iOS'ta bu kontrol,
+    // sistem sorgu izinleri nedeniyle URL açılabilir olsa bile false dönebiliyor.
+    var opened=await launchUrl(uri,mode:LaunchMode.inAppBrowserView);
+    if(!opened){opened=await launchUrl(uri,mode:LaunchMode.inAppWebView);}
+    if(!opened){opened=await launchUrl(uri,mode:LaunchMode.externalApplication);}
+    if(!opened)throw Exception('URL açılamadı');
+  }catch(_){
+    if(mounted)setState(()=>err='Bağlantı açılamadı. İnternet bağlantınızı kontrol edip tekrar deneyin.');
+  }
+}
 Widget _legalLinks()=>Wrap(alignment:WrapAlignment.center,spacing:4,runSpacing:2,children:[TextButton(onPressed:()=>_openLegal('gizlilik-politikasi.php'),child:const Text('Gizlilik Politikası',style:TextStyle(fontSize:11))),TextButton(onPressed:()=>_openLegal('kullanim-kosullari.php'),child:const Text('Kullanım Koşulları',style:TextStyle(fontSize:11))),TextButton(onPressed:()=>_openLegal('kvkk.php'),child:const Text('KVKK',style:TextStyle(fontSize:11)))]);
 Future<void>managerLogin()async{await _run(()async{final d=await Api.request('login',method:'POST',auth:false,body:{'identifier':email.text.trim(),'password':pw.text});await _enter(d);});}
 Future<void>sendOtp()async{await _run(()async{final d=await Api.request('resident-otp-request',method:'POST',auth:false,body:{'phone':phone.text.trim()});if(d['demo_login']==true&&d['token']!=null){await _enter(d);return;}if(mounted)setState(()=>otpSent=true);});}

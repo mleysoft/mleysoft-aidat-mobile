@@ -1112,7 +1112,7 @@ class _BankStatementImportPageState extends State<BankStatementImportPage>{
   List accounts=[];List recent=[];int? accountId;String? path;String? fileName;bool busy=true,uploading=false;Map<String,dynamic>? result;
   @override void initState(){super.initState();path=widget.initialPath;if(path!=null)fileName=path!.split(Platform.pathSeparator).last;load();}
   Future<void>load()async{try{final d=await Api.request('manager?action=bank_import_info');accounts=d['accounts']??[];recent=d['recent']??[];if(accounts.length==1)accountId=int.tryParse('${accounts.first['id']}');}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$e')));}busy=false;if(mounted)setState((){});}
-  Future<void>pick()async{final r=await FilePicker.platform.pickFiles(type:FileType.custom,allowedExtensions:['xlsx','csv','mt940','sta','txt']);if(r==null||r.files.isEmpty)return;final f=r.files.single;if(f.path==null)return;setState((){path=f.path;fileName=f.name;result=null;});}
+  Future<void>pick()async{final r=await FilePicker.platform.pickFiles(type:FileType.custom,allowedExtensions:['xls','xlsx','csv','mt940','sta','txt']);if(r==null||r.files.isEmpty)return;final f=r.files.single;if(f.path==null)return;setState((){path=f.path;fileName=f.name;result=null;});}
   Future<void>upload()async{
     if(uploading||path==null||accountId==null)return;
     if(!await requireManagerPackage(context))return;

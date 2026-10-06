@@ -7,6 +7,7 @@ import '../core/loading.dart';
 import '../core/ui.dart';
 import '../core/push.dart';
 import 'login.dart';
+import 'account_page.dart';
 
 double nv(dynamic v)=>v is num?v.toDouble():double.tryParse('$v')??0;
 String tl(dynamic v)=>formatMoneyTr(v);
@@ -85,8 +86,8 @@ Widget build(BuildContext c) {
       ]),
       actions: [PopupMenuButton<String>(
         icon: const CircleAvatar(radius: 18, backgroundColor: ink, child: Icon(Icons.person_rounded, color: brand, size: 19)),
-        onSelected: (v) { if (v == 'logout') logout(); },
-        itemBuilder: (_) => [PopupMenuItem(enabled: false, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, style: const TextStyle(fontWeight: FontWeight.w800)), Text("${user?['apartment'] ?? ''}", style: const TextStyle(fontSize: 11, color: muted))])), const PopupMenuDivider(), const PopupMenuItem(value: 'logout', child: Row(children: [Icon(Icons.logout_rounded, color: danger), SizedBox(width: 9), Text('Çıkış Yap')]))],
+        onSelected: (v) { if(v=='account')Navigator.push(context,MaterialPageRoute(builder:(_)=>const AccountPage())); else if (v == 'logout') logout(); },
+        itemBuilder: (_) => [PopupMenuItem(enabled: false, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, style: const TextStyle(fontWeight: FontWeight.w800)), Text("${user?['apartment'] ?? ''}", style: const TextStyle(fontSize: 11, color: muted))])), const PopupMenuDivider(), const PopupMenuItem(value:'account',child:Row(children:[Icon(Icons.manage_accounts_outlined),SizedBox(width:9),Text('Hesabım')])), const PopupMenuItem(value: 'logout', child: Row(children: [Icon(Icons.logout_rounded, color: danger), SizedBox(width: 9), Text('Çıkış Yap')]))],
       )],
     ),
     body: IndexedStack(index: index, children: pages),

@@ -13,7 +13,6 @@ class ApiException implements Exception {
 }
 
 class Api {
-  static bool? managerPackageActive;
   static const _store=FlutterSecureStorage(aOptions: AndroidOptions(encryptedSharedPreferences:true));
   static const _sharedAuth=MethodChannel('com.mleysoft.aidat/shared_auth');
   static Future<void> _syncSharedAuth(String? value) async {
@@ -38,7 +37,6 @@ class Api {
     try { d=jsonDecode(r.body); } catch (_) { throw ApiException('Sunucu geçersiz yanıt verdi (HTTP ${r.statusCode}).',r.statusCode); }
     if(d is! Map<String,dynamic>) throw ApiException('Sunucudan geçersiz yanıt alındı (HTTP ${r.statusCode}).',r.statusCode);
     if(r.statusCode>=400 || d['ok']!=true) throw ApiException((d['message']??'İşlem tamamlanamadı.').toString(),r.statusCode);
-    if(path.startsWith('manager') && d.containsKey('subscription_active')) managerPackageActive=d['subscription_active']==true;
     return d;
   }
 }

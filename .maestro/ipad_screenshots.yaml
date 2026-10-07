@@ -1,0 +1,69 @@
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    permissions:
+      all: allow
+- waitForAnimationToEnd:
+    timeout: 5000
+- assertVisible: "Yönetici Girişi"
+- takeScreenshot: 01-login-ipad
+
+# Gerçek demo daire hesabıyla uygulamaya kullanıcı gibi giriş yap.
+- tapOn:
+    text: "Daire Girişi"
+    retryTapIfNoChange: true
+- tapOn:
+    text: "Cep Telefonu"
+    retryTapIfNoChange: true
+- inputText: "05555555555"
+- tapOn:
+    text: "WhatsApp Kodunu Gönder"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible: "Finansal Durum"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: 02-anasayfa-ipad
+
+- tapOn:
+    text: "Aidatlar"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible: "Aidatlarım"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: 03-aidatlar-ipad
+
+- tapOn:
+    text: "Ödemeler"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible: "Ödemelerim"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: 04-odemeler-ipad
+
+- tapOn:
+    text: "Duyurular"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible: "Duyurular"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: 05-duyurular-ipad
+
+- tapOn:
+    text: "Talepler"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible: "Taleplerim"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: 06-talepler-ipad

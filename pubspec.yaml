@@ -1,5 +1,5 @@
 name: mleysoft_aidat
-version: 1.0.0+184
+version: 1.0.0+185
 publish_to: none
 description: MleySoft Aidat Takip native Flutter uygulaması.
 environment:

@@ -1,26 +1,27 @@
 appId: ${APP_ID}
 ---
-- launchApp:
-    clearState: true
-    clearKeychain: true
-    permissions:
-      all: allow
+# Freshly-created iPad Simulator has no old app data, so clearState/clearKeychain
+# would only trigger an unnecessary iOS reinstall in Maestro.
+- launchApp
+- extendedWaitUntil:
+    visible: "Yönetici Girişi"
+    timeout: 20000
 - waitForAnimationToEnd:
     timeout: 5000
-- assertVisible: "Yönetici Girişi"
 - takeScreenshot: 01-login-ipad
 
-# Gerçek demo daire hesabıyla uygulamaya kullanıcı gibi giriş yap.
+# Public demo resident account. The API preflight checks that OTP is bypassed.
 - tapOn:
     text: "Daire Girişi"
-    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible: "Cep Telefonu"
+    timeout: 10000
 - tapOn:
     text: "Cep Telefonu"
-    retryTapIfNoChange: true
-- inputText: "05555555555"
+- inputText: ${DEMO_PHONE}
+- hideKeyboard
 - tapOn:
     text: "WhatsApp Kodunu Gönder"
-    retryTapIfNoChange: true
 - extendedWaitUntil:
     visible: "Finansal Durum"
     timeout: 30000
@@ -30,7 +31,6 @@ appId: ${APP_ID}
 
 - tapOn:
     text: "Aidatlar"
-    retryTapIfNoChange: true
 - extendedWaitUntil:
     visible: "Aidatlarım"
     timeout: 20000
@@ -40,7 +40,6 @@ appId: ${APP_ID}
 
 - tapOn:
     text: "Ödemeler"
-    retryTapIfNoChange: true
 - extendedWaitUntil:
     visible: "Ödemelerim"
     timeout: 20000
@@ -50,7 +49,6 @@ appId: ${APP_ID}
 
 - tapOn:
     text: "Duyurular"
-    retryTapIfNoChange: true
 - extendedWaitUntil:
     visible: "Duyurular"
     timeout: 20000
@@ -60,7 +58,6 @@ appId: ${APP_ID}
 
 - tapOn:
     text: "Talepler"
-    retryTapIfNoChange: true
 - extendedWaitUntil:
     visible: "Taleplerim"
     timeout: 20000

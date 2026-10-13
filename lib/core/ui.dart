@@ -173,8 +173,7 @@ const _detailLabels=<String,String>{
   'status':'Durum','created_at':'Oluşturulma Tarihi','updated_at':'Güncellenme Tarihi','manager_note':'Yönetici Notu',
   'block_name':'Blok','door_no':'Daire No','owner_name':'Ad Soyad','owner_phone':'Telefon','floor_no':'Kat',
   'category':'Kategori','expense_date':'Gider Tarihi','note':'Not','site_name':'Site','sender_name':'Gönderen','transfer_date':'Transfer Tarihi',
-  'payment_date':'Ödeme Tarihi','name':'Ad','email':'E-posta','phone':'Telefon','province':'İl','district':'İlçe','address':'Adres',
-  'package_name':'Paket','billing_months':'Faturalama Süresi','grace_days':'Ek Süre','max_apartments':'Daire Limiti'
+  'payment_date':'Ödeme Tarihi','name':'Ad','email':'E-posta','phone':'Telefon','province':'İl','district':'İlçe','address':'Adres'
 };
 const _hiddenDetailKeys=<String>{'id','user_id','site_id','apartment_id','block_id','due_id','payment_id','finance_account_id','receipt_url','url','token','device_token','reference_id','created_by','updated_by','is_active'};
 String detailStatus(dynamic v){switch('${v??''}'.toLowerCase()){case 'new':return 'Yeni';case 'in_progress':return 'İşlemde';case 'resolved':return 'Çözüldü';case 'closed':return 'Kapatıldı';case 'approved':return 'Onaylandı';case 'pending':return 'Bekliyor';case 'rejected':return 'Reddedildi';case 'paid':return 'Ödendi';case 'unpaid':return 'Ödenmedi';case 'cash':return 'Nakit';case 'bank':return 'Banka';case 'transfer':return 'Havale / EFT';default:return '${v??'-'}';}}

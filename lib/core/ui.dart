@@ -27,7 +27,264 @@ String formatMoneyTr(dynamic value) {
   return '${negative ? '-' : ''}${grouped.toString()},${fixed[1]} ₺';
 }
 
-const ink=Color(0xFF101828), muted=Color(0xFF667085), bg=Color(0xFFF5F7FB), line=Color(0xFFEAECF0), brand=Color(0xFFB9F227), brandDark=Color(0xFF7FAE00), blue=Color(0xFF4F6EF7), violet=Color(0xFF7C5CFC), danger=Color(0xFFEF476F), success=Color(0xFF16B364), orange=Color(0xFFF79009);
+// ===========================================================================
+// MleySoft Aidat – Mobil Tasarım Sistemi v195 (yeniden yazıldı)
+// Web paneliyle aynı renk dili: lacivert mürekkep, petrol yeşili birincil renk,
+// marka limonu vurgu. Tüm ekranlar bu belirteçleri kullanır.
+// ===========================================================================
+const ink = Color(0xFF0B1324);
+const ink2 = Color(0xFF1E293B);
+const muted = Color(0xFF64748B);
+const subtle = Color(0xFF94A3B8);
+const bg = Color(0xFFF3F5F8);
+const surface2 = Color(0xFFF8FAFC);
+const line = Color(0xFFE3E8EF);
+const primary = Color(0xFF0F766E);
+const primaryDark = Color(0xFF115E59);
+const primarySoft = Color(0xFFE7F5F3);
+const brand = Color(0xFFC6F135); // marka limonu (vurgu)
+const brandDark = Color(0xFF5E7F00);
+const blue = Color(0xFF2563EB);
+const violet = Color(0xFF7C3AED);
+const danger = Color(0xFFDC2626);
+const success = Color(0xFF15803D);
+const orange = Color(0xFFD97706);
+
+/// Uygulama genelinde SnackBar göstermek için (yakalanmamış API hataları dahil).
+final GlobalKey<ScaffoldMessengerState> appMessengerKey = GlobalKey<ScaffoldMessengerState>();
+void showAppMessage(String text, {bool error = true}) {
+  final m = appMessengerKey.currentState;
+  if (m == null) return;
+  m.hideCurrentSnackBar();
+  m.showSnackBar(SnackBar(
+    content: Row(children: [
+      Icon(error ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded, color: error ? const Color(0xFFFCA5A5) : brand, size: 20),
+      const SizedBox(width: 10),
+      Expanded(child: Text(text)),
+    ]),
+  ));
+}
+
+/// API/ağ hatalarını kullanıcıya gösterilecek kısa Türkçe metne çevirir.
+String apiErrorText(Object e) {
+  final t = '$e'.replaceFirst('Exception: ', '').trim();
+  if (t.startsWith('TimeoutException')) return 'Sunucu zamanında yanıt vermedi. Lütfen tekrar deneyin.';
+  if (t.contains('SocketException') || t.contains('Failed host lookup') || t.contains('ClientException')) return 'İnternet bağlantısı kurulamadı. Bağlantınızı kontrol edin.';
+  return t.isEmpty ? 'İşlem tamamlanamadı.' : t;
+}
+
+/// Tablet (iPad) ve geniş ekran eşiği.
+const double kWideBreakpoint = 840;
+bool isWideLayout(BuildContext context) => MediaQuery.sizeOf(context).width >= kWideBreakpoint;
+
+/// İçeriği geniş ekranlarda okunabilir bir genişlikte ortalar.
+class ContentWidth extends StatelessWidget {
+  final Widget child;
+  final double maxWidth;
+  const ContentWidth({super.key, required this.child, this.maxWidth = 1180});
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(builder: (context, box) {
+        final w = box.maxWidth > maxWidth ? maxWidth : box.maxWidth;
+        return Align(
+          alignment: Alignment.topCenter,
+          child: SizedBox(width: w, height: box.maxHeight.isFinite ? box.maxHeight : null, child: child),
+        );
+      });
+}
+
+/// Kabuk menü öğesi.
+class AppNavItem {
+  final String label;
+  final IconData icon;
+  final IconData? selectedIcon;
+  final int badge;
+  const AppNavItem(this.label, this.icon, {this.selectedIcon, this.badge = 0});
+}
+
+/// Geniş ekranlarda kalıcı yan menü (iPad yatay/dikey, Android tablet).
+class SideNavigationPanel extends StatelessWidget {
+  final List<AppNavItem> items;
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
+  final Widget? header;
+  final Widget? footer;
+  final List<int>? order;
+  final Map<int, String>? groupTitles;
+  const SideNavigationPanel({super.key, required this.items, required this.selectedIndex, required this.onSelected, this.header, this.footer, this.order, this.groupTitles});
+
+  @override
+  Widget build(BuildContext context) {
+    final indexes = order ?? List<int>.generate(items.length, (i) => i);
+    return Container(
+      width: 284,
+      decoration: const BoxDecoration(color: ink),
+      child: SafeArea(
+        right: false,
+        child: Column(children: [
+          if (header != null) header!,
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
+              children: [
+                for (final i in indexes) ...[
+                  if (groupTitles != null && groupTitles!.containsKey(i))
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 14, 12, 6),
+                      child: Text(groupTitles![i]!.toUpperCase(), style: const TextStyle(color: Color(0xFF6B7A92), fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: .8)),
+                    ),
+                  if (i < items.length) _SideNavTile(item: items[i], selected: i == selectedIndex, onTap: () => onSelected(i)),
+                ],
+              ],
+            ),
+          ),
+          if (footer != null) footer!,
+        ]),
+      ),
+    );
+  }
+}
+
+class _SideNavTile extends StatelessWidget {
+  final AppNavItem item;
+  final bool selected;
+  final VoidCallback onTap;
+  const _SideNavTile({required this.item, required this.selected, required this.onTap});
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: 2),
+        child: Material(
+          color: selected ? const Color(0x1FC6F135) : Colors.transparent,
+          borderRadius: BorderRadius.circular(11),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(11),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+              child: Row(children: [
+                Icon(selected ? (item.selectedIcon ?? item.icon) : item.icon, size: 20, color: selected ? brand : const Color(0xFF8FA0B8)),
+                const SizedBox(width: 12),
+                Expanded(child: Text(item.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: selected ? Colors.white : const Color(0xFFC2CCDA), fontSize: 14, fontWeight: selected ? FontWeight.w700 : FontWeight.w500))),
+                if (item.badge > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(color: brand, borderRadius: BorderRadius.circular(99)),
+                    child: Text('${item.badge}', style: const TextStyle(color: ink, fontSize: 11, fontWeight: FontWeight.w800)),
+                  ),
+              ]),
+            ),
+          ),
+        ),
+      );
+}
+
+/// Koyu yan menünün üst kısmı: logo + bağlam (site/daire) kartı.
+class SideNavHeader extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final VoidCallback? onTap;
+  const SideNavHeader({super.key, required this.title, required this.subtitle, this.icon = Icons.apartment_rounded, this.onTap});
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.asset('assets/images/aidat_icon.png', width: 36, height: 36, fit: BoxFit.cover)),
+            const SizedBox(width: 10),
+            const Text('MleySoft Aidat', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800, letterSpacing: -.2)),
+          ]),
+          const SizedBox(height: 16),
+          Material(
+            color: const Color(0x14FFFFFF),
+            borderRadius: BorderRadius.circular(14),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: onTap,
+              child: Padding(
+                padding: const EdgeInsets.all(11),
+                child: Row(children: [
+                  Container(width: 36, height: 36, decoration: BoxDecoration(color: brand, borderRadius: BorderRadius.circular(10)), child: Icon(icon, size: 19, color: ink)),
+                  const SizedBox(width: 10),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF8FA0B8), fontSize: 11, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 1),
+                    Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700)),
+                  ])),
+                  if (onTap != null) const Icon(Icons.unfold_more_rounded, color: Color(0xFF8FA0B8), size: 18),
+                ]),
+              ),
+            ),
+          ),
+        ]),
+      );
+}
+
+/// Koyu yan menünün alt kısmı: çıkış.
+class SideNavFooter extends StatelessWidget {
+  final VoidCallback onLogout;
+  final VoidCallback? onAccount;
+  const SideNavFooter({super.key, required this.onLogout, this.onAccount});
+  @override
+  Widget build(BuildContext context) => Container(
+        decoration: const BoxDecoration(border: Border(top: BorderSide(color: Color(0x14FFFFFF)))),
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        child: Column(children: [
+          if (onAccount != null) _SideNavTile(item: const AppNavItem('Hesabım', Icons.manage_accounts_outlined), selected: false, onTap: onAccount!),
+          Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(11),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(11),
+              onTap: onLogout,
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                child: Row(children: [Icon(Icons.logout_rounded, size: 20, color: Color(0xFFFCA5A5)), SizedBox(width: 12), Text('Güvenli Çıkış', style: TextStyle(color: Color(0xFFFCA5A5), fontWeight: FontWeight.w600))]),
+              ),
+            ),
+          ),
+        ]),
+      );
+}
+
+/// Bilgi şeridi (ör. demo hesap uyarısı).
+class InfoBanner extends StatelessWidget {
+  final String text;
+  final IconData icon;
+  final Color color;
+  const InfoBanner(this.text, {super.key, this.icon = Icons.visibility_outlined, this.color = blue});
+  @override
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
+        margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(color: color.withValues(alpha: .08), borderRadius: BorderRadius.circular(12), border: Border.all(color: color.withValues(alpha: .18))),
+        child: Row(children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 9),
+          Expanded(child: Text(text, style: const TextStyle(color: ink, fontSize: 12, fontWeight: FontWeight.w600, height: 1.35))),
+        ]),
+      );
+}
+
+/// Yükleme hatası için ortak, yeniden dene düğmeli görünüm.
+class ErrorRetry extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+  const ErrorRetry({super.key, required this.message, required this.onRetry});
+  @override
+  Widget build(BuildContext context) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(width: 64, height: 64, decoration: BoxDecoration(color: danger.withValues(alpha: .08), shape: BoxShape.circle), child: const Icon(Icons.cloud_off_rounded, color: danger, size: 30)),
+            const SizedBox(height: 14),
+            Text(message, textAlign: TextAlign.center, style: const TextStyle(color: ink, fontWeight: FontWeight.w600, height: 1.4)),
+            const SizedBox(height: 16),
+            FilledButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh_rounded), label: const Text('Tekrar Dene')),
+          ]),
+        ),
+      );
+}
 
 class PageTitle extends StatelessWidget {
   final String title, subtitle;
@@ -43,10 +300,10 @@ class PageTitle extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w900, letterSpacing: -.55, color: ink)),
+                  Text(title, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: -.6, color: ink)),
                   if (subtitle.isNotEmpty) ...[
                     const SizedBox(height: 4),
-                    Text(subtitle, style: const TextStyle(color: muted, fontSize: 12, height: 1.3, fontWeight: FontWeight.w600)),
+                    Text(subtitle, style: const TextStyle(color: muted, fontSize: 13, height: 1.35, fontWeight: FontWeight.w500)),
                   ],
                 ],
               ),
@@ -80,10 +337,10 @@ class SectionHeading extends StatelessWidget {
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: brand.withValues(alpha: .18),
+              color: primarySoft,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, size: 18, color: ink),
+            child: Icon(icon, size: 18, color: primary),
           ),
           const SizedBox(width: 10),
         ],
@@ -114,22 +371,27 @@ class SoftCard extends StatelessWidget {
   final VoidCallback? onTap;
   const SoftCard({super.key, required this.child, this.padding = const EdgeInsets.all(14), this.onTap});
   @override
-  Widget build(BuildContext context) => Material(
+  Widget build(BuildContext context) => DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: const [BoxShadow(color: Color(0x0A0B1324), blurRadius: 18, offset: Offset(0, 6)), BoxShadow(color: Color(0x050B1324), blurRadius: 2, offset: Offset(0, 1))],
+        ),
+        child: Material(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
           child: Container(
             padding: padding,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(18),
               border: Border.all(color: line),
-              boxShadow: const [BoxShadow(color: Color(0x06101828), blurRadius: 12, offset: Offset(0, 4))],
             ),
             child: child,
           ),
         ),
+      ),
       );
 }
 class IconBubble extends StatelessWidget {
@@ -140,8 +402,8 @@ class IconBubble extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         width: 40,
         height: 40,
-        decoration: BoxDecoration(color: color.withValues(alpha: .10), borderRadius: BorderRadius.circular(12)),
-        child: Icon(icon, color: color, size: 20),
+        decoration: BoxDecoration(color: color.withValues(alpha: .10), borderRadius: BorderRadius.circular(13)),
+        child: Icon(icon, color: color, size: 21),
       );
 }
 class MetricCard extends StatelessWidget {
@@ -157,15 +419,15 @@ class MetricCard extends StatelessWidget {
           children: [
             Row(children: [IconBubble(icon, color), const Spacer(), Container(width: 7, height: 7, decoration: BoxDecoration(color: color, shape: BoxShape.circle))]),
             const SizedBox(height: 12),
-            Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: ink, letterSpacing: -.3)),
+            Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: ink, letterSpacing: -.4)),
             const SizedBox(height: 3),
-            Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: muted, fontWeight: FontWeight.w700)),
+            Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: muted, fontWeight: FontWeight.w600)),
           ],
         ),
       );
 }
-class StatusPill extends StatelessWidget{final String text;final Color color;const StatusPill(this.text,this.color,{super.key});@override Widget build(BuildContext c)=>Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),decoration:BoxDecoration(color:color.withValues(alpha:.10),borderRadius:BorderRadius.circular(999)),child:Text(text,style:TextStyle(color:color,fontSize:11,fontWeight:FontWeight.w800)));}
-Widget emptyState(String text,IconData icon)=>Padding(padding:const EdgeInsets.symmetric(vertical:80),child:Column(children:[Icon(icon,size:42,color:const Color(0xFF98A2B3)),const SizedBox(height:12),Text(text,style:const TextStyle(color:muted,fontWeight:FontWeight.w600))]));
+class StatusPill extends StatelessWidget{final String text;final Color color;const StatusPill(this.text,this.color,{super.key});@override Widget build(BuildContext c)=>Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:5),decoration:BoxDecoration(color:color.withValues(alpha:.10),borderRadius:BorderRadius.circular(999),border:Border.all(color:color.withValues(alpha:.18))),child:Text(text,style:TextStyle(color:color,fontSize:11.5,fontWeight:FontWeight.w700)));}
+Widget emptyState(String text,IconData icon)=>Padding(padding:const EdgeInsets.symmetric(vertical:64,horizontal:24),child:Column(children:[Container(width:72,height:72,decoration:const BoxDecoration(color:surface2,shape:BoxShape.circle),child:Icon(icon,size:34,color:subtle)),const SizedBox(height:14),Text(text,textAlign:TextAlign.center,style:const TextStyle(color:muted,fontWeight:FontWeight.w600,height:1.4))]));
 
 const _detailLabels=<String,String>{
   'date':'Ödeme Tarihi','apartment':'Daire','period':'Dönem','amount':'Tutar','method':'Ödeme Yöntemi',
@@ -180,7 +442,7 @@ String detailStatus(dynamic v){switch('${v??''}'.toLowerCase()){case 'new':retur
 String detailValue(String key,dynamic value){if(key=='status'||key=='method')return detailStatus(value);if(['amount','balance','price','total','paid','debt','income','expense','remaining_amount','total_amount'].contains(key)){return formatMoneyTr(value);}return '$value';}
 Future<void>showRecordDetails(BuildContext context,String title,Map<String,dynamic> data,{List<String>? fields})async{
   final keys=(fields??data.keys.where((k)=>_detailLabels.containsKey(k)&&!_hiddenDetailKeys.contains(k)).toList()).where((k)=>data[k]!=null&&'${data[k]}'.trim().isNotEmpty).toList();
-  await showModalBottomSheet(context:context,isScrollControlled:true,backgroundColor:Colors.transparent,builder:(x)=>Container(constraints:BoxConstraints(maxHeight:MediaQuery.of(x).size.height*.82),decoration:const BoxDecoration(color:Colors.white,borderRadius:BorderRadius.vertical(top:Radius.circular(30))),child:SafeArea(top:false,child:Column(mainAxisSize:MainAxisSize.min,children:[Container(margin:const EdgeInsets.only(top:10),width:42,height:4,decoration:BoxDecoration(color:const Color(0xFFD0D5DD),borderRadius:BorderRadius.circular(99))),Padding(padding:const EdgeInsets.fromLTRB(20,18,12,12),child:Row(children:[Expanded(child:Text(title,style:const TextStyle(fontSize:23,fontWeight:FontWeight.w900,color:ink,letterSpacing:-.4))),IconButton(onPressed:()=>Navigator.pop(x),icon:const Icon(Icons.close_rounded))])),const Divider(height:1),Flexible(child:SingleChildScrollView(padding:const EdgeInsets.fromLTRB(20,18,20,28),child:Column(children:keys.map((k)=>Container(margin:const EdgeInsets.only(bottom:10),padding:const EdgeInsets.symmetric(horizontal:14,vertical:13),decoration:BoxDecoration(color:bg,borderRadius:BorderRadius.circular(16)),child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[Expanded(flex:4,child:Text(_detailLabels[k]??k,style:const TextStyle(fontSize:12,color:muted,fontWeight:FontWeight.w700))),const SizedBox(width:12),Expanded(flex:6,child:Text(detailValue(k,data[k]),textAlign:TextAlign.right,style:const TextStyle(fontSize:13,color:ink,fontWeight:FontWeight.w800,height:1.35)))]))).toList())))]))));
+  await showModalBottomSheet(context:context,isScrollControlled:true,backgroundColor:Colors.transparent,builder:(x)=>Container(constraints:BoxConstraints(maxHeight:MediaQuery.of(x).size.height*.82),decoration:const BoxDecoration(color:Colors.white,borderRadius:BorderRadius.vertical(top:Radius.circular(30))),child:SafeArea(top:false,child:Column(mainAxisSize:MainAxisSize.min,children:[Container(margin:const EdgeInsets.only(top:10),width:42,height:4,decoration:BoxDecoration(color:line,borderRadius:BorderRadius.circular(99))),Padding(padding:const EdgeInsets.fromLTRB(20,18,12,12),child:Row(children:[Expanded(child:Text(title,style:const TextStyle(fontSize:22,fontWeight:FontWeight.w800,color:ink,letterSpacing:-.4))),IconButton(onPressed:()=>Navigator.pop(x),icon:const Icon(Icons.close_rounded))])),const Divider(height:1),Flexible(child:SingleChildScrollView(padding:const EdgeInsets.fromLTRB(20,18,20,28),child:Column(children:keys.map((k)=>Container(margin:const EdgeInsets.only(bottom:10),padding:const EdgeInsets.symmetric(horizontal:14,vertical:13),decoration:BoxDecoration(color:surface2,borderRadius:BorderRadius.circular(14),border:Border.all(color:line)),child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[Expanded(flex:4,child:Text(_detailLabels[k]??k,style:const TextStyle(fontSize:12,color:muted,fontWeight:FontWeight.w700))),const SizedBox(width:12),Expanded(flex:6,child:Text(detailValue(k,data[k]),textAlign:TextAlign.right,style:const TextStyle(fontSize:13,color:ink,fontWeight:FontWeight.w800,height:1.35)))]))).toList())))]))));
 }
 
 
@@ -225,7 +487,7 @@ Future<Map<String,dynamic>?> showApartmentPicker(
                     width: 42,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFD0D5DD),
+                      color: line,
                       borderRadius: BorderRadius.circular(99),
                     ),
                   ),
@@ -289,17 +551,17 @@ Future<Map<String,dynamic>?> showApartmentPicker(
                               final active = '${r['apartment_id']}' == '$selectedId';
                               return Card(
                                 elevation: 0,
-                                color: active ? const Color(0xFFEAF8EF) : Colors.white,
+                                color: active ? primarySoft : Colors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
-                                  side: BorderSide(color: active ? const Color(0xFF9BD8AE) : const Color(0xFFEAECF0)),
+                                  side: BorderSide(color: active ? primary.withValues(alpha: .35) : line),
                                 ),
                                 child: ListTile(
                                   enabled: !active,
-                                  leading: Icon(active ? Icons.check_circle_rounded : Icons.apartment_rounded, color: active ? success : ink),
+                                  leading: Icon(active ? Icons.check_circle_rounded : Icons.apartment_rounded, color: active ? primary : ink),
                                   title: Text('${r['site_name'] ?? ''}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w900)),
                                   subtitle: Text('${r['block_name'] ?? ''} • Daire ${r['door_no'] ?? ''}'),
-                                  trailing: Text(active ? 'Aktif' : 'Seç', style: TextStyle(fontWeight: FontWeight.w800, color: active ? success : ink)),
+                                  trailing: Text(active ? 'Aktif' : 'Seç', style: TextStyle(fontWeight: FontWeight.w700, color: active ? primary : ink)),
                                   onTap: active ? null : () => Navigator.pop(sheetContext, r),
                                 ),
                               );
@@ -594,7 +856,7 @@ class ProfessionalDataTable extends StatelessWidget {
         return Column(children:List.generate(rows.length,(ri){
           final row=rows[ri];
           final cells=row.cells;
-          final primary=cells.isNotEmpty?cells.first.child:const SizedBox.shrink();
+          final primaryCell=cells.isNotEmpty?cells.first.child:const SizedBox.shrink();
           final secondary=cells.length>1?cells[1].child:null;
           return Container(
             margin:EdgeInsets.only(bottom:ri==rows.length-1?0:10),
@@ -604,9 +866,9 @@ class ProfessionalDataTable extends StatelessWidget {
               onTap:row.onSelectChanged==null?null:()=>row.onSelectChanged!(true),
               child:Padding(padding:const EdgeInsets.fromLTRB(15,14,15,13),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                 Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                  Container(width:4,height:38,decoration:BoxDecoration(color:brandDark,borderRadius:BorderRadius.circular(99))),
+                  Container(width:4,height:38,decoration:BoxDecoration(color:primary,borderRadius:BorderRadius.circular(99))),
                   const SizedBox(width:10),
-                  Expanded(child:DefaultTextStyle.merge(style:const TextStyle(fontSize:14,color:ink,fontWeight:FontWeight.w900,height:1.2),child:primary)),
+                  Expanded(child:DefaultTextStyle.merge(style:const TextStyle(fontSize:14,color:ink,fontWeight:FontWeight.w900,height:1.2),child:primaryCell)),
                   if(cells.length>2) ...[const SizedBox(width:10),Flexible(child:Align(alignment:Alignment.topRight,child:DefaultTextStyle.merge(style:const TextStyle(fontSize:13,color:ink,fontWeight:FontWeight.w900),child:cells.last.child)))],
                 ]),
                 if(secondary!=null)...[const SizedBox(height:5),Padding(padding:const EdgeInsets.only(left:14),child:DefaultTextStyle.merge(style:const TextStyle(fontSize:11.5,color:muted,fontWeight:FontWeight.w600),child:secondary))],
@@ -639,7 +901,7 @@ class ProfessionalDataTable extends StatelessWidget {
       final width=constraints.maxWidth>minWidth?constraints.maxWidth:minWidth;
       return Container(decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(16),border:Border.all(color:line)),clipBehavior:Clip.antiAlias,child:SingleChildScrollView(scrollDirection:Axis.horizontal,physics:const BouncingScrollPhysics(),child:ConstrainedBox(constraints:BoxConstraints(minWidth:width),child:DataTable(
         headingRowHeight:42,dataRowMinHeight:50,dataRowMaxHeight:62,columnSpacing:22,horizontalMargin:14,dividerThickness:.7,showCheckboxColumn:false,
-        headingRowColor:WidgetStateProperty.all(const Color(0xFFF8FAFC)),
+        headingRowColor:WidgetStateProperty.all(surface2),
         headingTextStyle:const TextStyle(fontSize:10.5,color:muted,fontWeight:FontWeight.w900,letterSpacing:.15),
         dataTextStyle:const TextStyle(fontSize:12.5,color:ink,fontWeight:FontWeight.w600),columns:columns,rows:rows,
       ))));
